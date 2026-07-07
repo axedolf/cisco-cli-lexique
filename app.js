@@ -75,8 +75,8 @@ function filteredCommands() {
     const id = commandId(item);
     const matchesTheme = hasQuery || state.theme === "all" || item.theme === state.theme;
     const matchesType = hasQuery || state.type === "all" || item.type === state.type;
-    const matchesLevel = state.level === "all" || item.level === state.level;
-    const matchesFavorites = !state.favoritesOnly || state.favorites.has(id);
+    const matchesLevel = hasQuery || state.level === "all" || item.level === state.level;
+    const matchesFavorites = hasQuery || !state.favoritesOnly || state.favorites.has(id);
     const matchesQuery = matchesSearch(item, q);
     return matchesTheme && matchesType && matchesLevel && matchesFavorites && matchesQuery;
   });
