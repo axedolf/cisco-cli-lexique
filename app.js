@@ -4,6 +4,7 @@ const state = {
   type: "all",
   level: "all",
   view: "cards",
+  activeResultIndex: -1,
   favoritesOnly: false,
   agentOpen: localStorage.getItem("cisco-cli-agent-open") === "true",
   sessionParams: JSON.parse(localStorage.getItem("cisco-cli-session-params") || "{}"),
@@ -15,6 +16,8 @@ const $$ = (selector) => Array.from(document.querySelectorAll(selector));
 
 const themeMap = Object.fromEntries(CISCO_DATA.themes.map((theme) => [theme.id, theme]));
 const snippetMap = Object.fromEntries((CISCO_DATA.snippets || []).map((snippet) => [snippet.commandTitle, snippet]));
+const copyStore = new Map();
+let copyStoreCounter = 0;
 
 function normalize(value) {
   return value.toString().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -164,6 +167,48 @@ function slugify(value) {
   return normalize(value).replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "script";
 }
 
+function registerCopyText(text) {
+  const id = `copy-${copyStoreCounter += 1}`;
+  copyStore.set(id, text);
+  return id;
+}
+
+function copyButton(label, text, className = "copy-btn") {
+  return `<button class="${className}" data-copy-id="${registerCopyText(text)}">${label}</button>`;
+}
+
+function exportButton(label, filename, text) {
+  return `<button class="export-btn" data-filename="${escapeAttr(filename)}" data-export-id="${registerCopyText(text)}">${label}</button>`;
+}
+
+function commandWarnings(item) {
+  const text = commandsForExport(item.commands).toLowerCase();
+  const warnings = [];
+  if (text.includes("crypto key generate rsa")) {
+    warnings.push("Verifier que ip domain-name est configure avant crypto key generate rsa.");
+  }
+  if (/\breload\b/.test(text)) {
+    warnings.push("reload redemarre l'equipement: sauvegarder et prevoir une fenetre d'intervention.");
+  }
+  if (/\b(write erase|erase startup-config|delete flash:|format flash:|factory-reset)\b/.test(text)) {
+    warnings.push("Commande destructive: confirmer sauvegarde, acces console et procedure de retour arriere.");
+  }
+  if (text.includes("default-information originate always")) {
+    warnings.push("default-information originate always peut annoncer une route par defaut meme si la sortie est indisponible.");
+  }
+  return [...new Set([...(item.warnings || []), ...warnings])];
+}
+
+function renderWarnings(item) {
+  const warnings = commandWarnings(item);
+  if (!warnings.length) return "";
+  return `
+    <div class="warnings" role="note">
+      ${warnings.map((warning) => `<span class="warning-badge">${escapeHtml(warning)}</span>`).join("")}
+    </div>
+  `;
+}
+
 function renderNav() {
   const nav = $("#themeNav");
   const total = CISCO_DATA.commands.length;
@@ -193,13 +238,15 @@ function renderNav() {
 function renderCards() {
   const items = filteredCommands();
   $("#resultCount").textContent = items.length;
+  if (state.activeResultIndex >= items.length) state.activeResultIndex = items.length - 1;
   $("#cardsGrid").innerHTML = items.map((item) => {
     const theme = themeMap[item.theme];
     const id = commandId(item);
     const favorite = state.favorites.has(id);
     const exportText = commandsForExport(item.commands);
+    const index = items.indexOf(item);
     return `
-      <article class="command-card" style="--accent:${theme.accent}">
+      <article class="command-card ${state.activeResultIndex === index ? "selected" : ""}" style="--accent:${theme.accent}" data-result-index="${index}" tabindex="-1">
         <div class="card-head">
           <div>
             <span class="theme-badge">${theme.name}</span>
@@ -212,11 +259,12 @@ function renderCards() {
           <span>${labelType(item.type)}</span>
           <span>${labelLevel(item.level)}</span>
         </div>
+        ${renderWarnings(item)}
         ${renderCommandBlock(item.commands)}
         ${renderSnippet(item)}
         <div class="card-actions">
-          <button class="copy-btn" data-copy="${escapeAttr(exportText)}">Copier</button>
-          <button class="export-btn" data-filename="${escapeAttr(slugify(item.title))}.txt" data-export="${escapeAttr(exportText)}">Exporter .txt</button>
+          ${copyButton("Copier", exportText)}
+          ${exportButton("Exporter .txt", `${slugify(item.title)}.txt`, exportText)}
         </div>
         <ul class="notes">
           ${item.notes.map((note) => `<li>${note}</li>`).join("")}
@@ -237,7 +285,7 @@ function renderCommandBlock(commands) {
         <div class="command-line">
           <span class="prompt-badge">${escapeHtml(commandMode(prepared))}</span>
           <code>${highlightVariables(prepared)}</code>
-          <button class="line-copy" data-copy="${escapeAttr(prepared)}" title="Copier cette ligne">Copier</button>
+          ${copyButton("Copier", prepared, "line-copy")}
         </div>
       `;}).join("")}
     </div>
@@ -261,7 +309,7 @@ function renderSnippet(item) {
         `).join("")}
       </div>
       <pre><code data-snippet-output>${escapeHtml(generated)}</code></pre>
-      <button class="copy-btn" data-copy="${escapeAttr(generated)}">Copier le snippet</button>
+      ${copyButton("Copier le snippet", generated)}
     </details>
   `;
 }
@@ -281,7 +329,7 @@ function updateSnippet(details) {
   });
   const generated = buildSnippet(snippet, values);
   details.querySelector("[data-snippet-output]").textContent = generated;
-  details.querySelector(".copy-btn").dataset.copy = generated;
+  details.querySelector(".copy-btn").dataset.copyId = registerCopyText(generated);
 }
 
 function findAgentMatches(question, limit = 4) {
@@ -352,7 +400,7 @@ function renderAgentMessage(role, content) {
           </div>
           <p>${escapeHtml(item.summary)}</p>
           <pre><code>${escapeHtml(commandsForExport(item.commands))}</code></pre>
-          <button class="copy-btn" data-copy="${escapeAttr(commandsForExport(item.commands))}">Copier</button>
+          ${copyButton("Copier", commandsForExport(item.commands))}
         </section>
       `).join("")}
       <p class="agent-warning">Controle la compatibilite IOS/IOS XE et teste les changements sensibles hors production.</p>
@@ -384,7 +432,7 @@ function setAgentOpen(open) {
 function bindCardActions() {
   $$(".copy-btn").forEach((button) => {
     button.addEventListener("click", async () => {
-      await copyToClipboard(button.dataset.copy);
+      await copyToClipboard(copyStore.get(button.dataset.copyId) || "");
       button.textContent = "Copie";
       setTimeout(() => button.textContent = "Copier", 1200);
     });
@@ -392,7 +440,7 @@ function bindCardActions() {
 
   $$(".line-copy").forEach((button) => {
     button.addEventListener("click", async () => {
-      await copyToClipboard(button.dataset.copy);
+      await copyToClipboard(copyStore.get(button.dataset.copyId) || "");
       button.textContent = "OK";
       setTimeout(() => button.textContent = "Copier", 1200);
     });
@@ -400,7 +448,7 @@ function bindCardActions() {
 
   $$(".export-btn").forEach((button) => {
     button.addEventListener("click", () => {
-      downloadTextFile(button.dataset.filename, button.dataset.export);
+      downloadTextFile(button.dataset.filename, copyStore.get(button.dataset.exportId) || "");
     });
   });
 
@@ -448,7 +496,7 @@ function renderScenarios() {
       <ol>
         ${scenario.steps.map((step) => `<li>${highlightVariables(applySessionParams(step))}</li>`).join("")}
       </ol>
-      <button class="export-btn" data-filename="${escapeAttr(slugify(scenario.title))}.txt" data-export="${escapeAttr(scenario.steps.map(applySessionParams).join("\n"))}">Exporter .txt</button>
+      ${exportButton("Exporter .txt", `${slugify(scenario.title)}.txt`, scenario.steps.map(applySessionParams).join("\n"))}
     </article>
   `).join("");
   bindCardActions();
@@ -572,9 +620,28 @@ function highlightVariables(value) {
 
 function setView(view) {
   state.view = view;
+  state.activeResultIndex = -1;
   $$(".view-tab").forEach((tab) => tab.classList.toggle("active", tab.dataset.view === view));
   $$(".view-panel").forEach((panel) => panel.classList.remove("active"));
   $(`#${view}View`).classList.add("active");
+}
+
+function moveResultSelection(delta) {
+  if (state.view !== "cards") return;
+  const cards = $$(".command-card");
+  if (!cards.length) return;
+  state.activeResultIndex = Math.max(0, Math.min(cards.length - 1, state.activeResultIndex + delta));
+  cards.forEach((card, index) => card.classList.toggle("selected", index === state.activeResultIndex));
+  cards[state.activeResultIndex].scrollIntoView({ block: "nearest", behavior: "smooth" });
+}
+
+function toggleSelectedCard() {
+  if (state.view !== "cards" || state.activeResultIndex < 0) return;
+  const card = $$(".command-card")[state.activeResultIndex];
+  if (!card) return;
+  card.classList.toggle("expanded");
+  card.focus({ preventScroll: true });
+  card.scrollIntoView({ block: "center", behavior: "smooth" });
 }
 
 function render() {
@@ -587,6 +654,7 @@ function render() {
 function init() {
   $("#searchInput").addEventListener("input", (event) => {
     state.query = event.target.value;
+    state.activeResultIndex = state.query.trim() ? 0 : -1;
     renderCards();
   });
 
@@ -663,6 +731,13 @@ function init() {
       event.preventDefault();
       $("#searchInput").focus();
       $("#searchInput").select();
+      return;
+    }
+    if (!isTyping && state.view === "cards" && ["ArrowDown", "ArrowUp", "Enter"].includes(event.key)) {
+      event.preventDefault();
+      if (event.key === "ArrowDown") moveResultSelection(1);
+      if (event.key === "ArrowUp") moveResultSelection(-1);
+      if (event.key === "Enter") toggleSelectedCard();
     }
   });
 
