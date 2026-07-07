@@ -4,6 +4,7 @@ const state = {
   type: "all",
   level: "all",
   view: "cards",
+  favoritesOnly: false,
   agentOpen: localStorage.getItem("cisco-cli-agent-open") === "true",
   favorites: new Set(JSON.parse(localStorage.getItem("cisco-cli-favorites") || "[]"))
 };
@@ -12,6 +13,7 @@ const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => Array.from(document.querySelectorAll(selector));
 
 const themeMap = Object.fromEntries(CISCO_DATA.themes.map((theme) => [theme.id, theme]));
+const snippetMap = Object.fromEntries((CISCO_DATA.snippets || []).map((snippet) => [snippet.commandTitle, snippet]));
 
 function normalize(value) {
   return value.toString().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -28,14 +30,54 @@ function tokenize(value) {
     .filter((word) => word.length > 2);
 }
 
+function fuzzyIncludes(text, word) {
+  if (!word) return true;
+  if (text.includes(word)) return true;
+  let index = 0;
+  for (const char of text) {
+    if (char === word[index]) index += 1;
+    if (index === word.length) return true;
+  }
+  return false;
+}
+
+function editDistance(a, b) {
+  const rows = Array.from({ length: a.length + 1 }, (_, i) => [i]);
+  for (let j = 1; j <= b.length; j += 1) rows[0][j] = j;
+  for (let i = 1; i <= a.length; i += 1) {
+    for (let j = 1; j <= b.length; j += 1) {
+      rows[i][j] = Math.min(
+        rows[i - 1][j] + 1,
+        rows[i][j - 1] + 1,
+        rows[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
+      );
+    }
+  }
+  return rows[a.length][b.length];
+}
+
+function matchesSearch(item, query) {
+  if (!query) return true;
+  const haystack = normalize(commandText(item));
+  const words = tokenize(query);
+  const haystackWords = tokenize(commandText(item));
+  return words.every((word) => {
+    if (fuzzyIncludes(haystack, word)) return true;
+    if (word.length < 4) return false;
+    return haystackWords.some((candidate) => Math.abs(candidate.length - word.length) <= 2 && editDistance(candidate, word) <= 2);
+  });
+}
+
 function filteredCommands() {
   const q = normalize(state.query.trim());
   return CISCO_DATA.commands.filter((item) => {
+    const id = commandId(item);
     const matchesTheme = state.theme === "all" || item.theme === state.theme;
     const matchesType = state.type === "all" || item.type === state.type;
     const matchesLevel = state.level === "all" || item.level === state.level;
-    const matchesQuery = !q || normalize(commandText(item)).includes(q);
-    return matchesTheme && matchesType && matchesLevel && matchesQuery;
+    const matchesFavorites = !state.favoritesOnly || state.favorites.has(id);
+    const matchesQuery = matchesSearch(item, q);
+    return matchesTheme && matchesType && matchesLevel && matchesFavorites && matchesQuery;
   });
 }
 
@@ -90,7 +132,8 @@ function renderCards() {
           <span>${labelType(item.type)}</span>
           <span>${labelLevel(item.level)}</span>
         </div>
-        <pre><code>${escapeHtml(item.commands.join("\n"))}</code></pre>
+        ${renderCommandBlock(item.commands)}
+        ${renderSnippet(item)}
         <div class="card-actions">
           <button class="copy-btn" data-copy="${escapeAttr(item.commands.join("\n"))}">Copier</button>
         </div>
@@ -102,6 +145,59 @@ function renderCards() {
   }).join("") || `<div class="empty">Aucun resultat. Essaie un autre mot-cle ou retire un filtre.</div>`;
 
   bindCardActions();
+}
+
+function renderCommandBlock(commands) {
+  return `
+    <div class="command-block">
+      ${commands.map((command) => `
+        <div class="command-line">
+          <code>${highlightVariables(command)}</code>
+          <button class="line-copy" data-copy="${escapeAttr(command)}" title="Copier cette ligne">Copier</button>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderSnippet(item) {
+  const snippet = snippetMap[item.title];
+  if (!snippet) return "";
+  const defaults = Object.fromEntries(snippet.fields.map((field) => [field.key, field.value]));
+  const generated = buildSnippet(snippet, defaults);
+  return `
+    <details class="snippet" data-snippet="${escapeAttr(item.title)}">
+      <summary>${escapeHtml(snippet.title)}</summary>
+      <div class="snippet-fields">
+        ${snippet.fields.map((field) => `
+          <label>
+            <span>${escapeHtml(field.label)}</span>
+            <input data-snippet-field="${escapeAttr(field.key)}" value="${escapeAttr(field.value)}">
+          </label>
+        `).join("")}
+      </div>
+      <pre><code data-snippet-output>${escapeHtml(generated)}</code></pre>
+      <button class="copy-btn" data-copy="${escapeAttr(generated)}">Copier le snippet</button>
+    </details>
+  `;
+}
+
+function buildSnippet(snippet, values) {
+  return snippet.template
+    .map((line) => line.replace(/\{\{(\w+)\}\}/g, (_, key) => values[key] || ""))
+    .join("\n");
+}
+
+function updateSnippet(details) {
+  const snippet = snippetMap[details.dataset.snippet];
+  if (!snippet) return;
+  const values = {};
+  details.querySelectorAll("[data-snippet-field]").forEach((input) => {
+    values[input.dataset.snippetField] = input.value.trim();
+  });
+  const generated = buildSnippet(snippet, values);
+  details.querySelector("[data-snippet-output]").textContent = generated;
+  details.querySelector(".copy-btn").dataset.copy = generated;
 }
 
 function findAgentMatches(question, limit = 4) {
@@ -210,6 +306,20 @@ function bindCardActions() {
     });
   });
 
+  $$(".line-copy").forEach((button) => {
+    button.addEventListener("click", async () => {
+      await copyToClipboard(button.dataset.copy);
+      button.textContent = "OK";
+      setTimeout(() => button.textContent = "Copier", 1200);
+    });
+  });
+
+  $$(".snippet").forEach((details) => {
+    details.querySelectorAll("[data-snippet-field]").forEach((input) => {
+      input.addEventListener("input", () => updateSnippet(details));
+    });
+  });
+
   $$(".favorite").forEach((button) => {
     button.addEventListener("click", () => {
       const id = button.dataset.favorite;
@@ -247,6 +357,17 @@ function renderScenarios() {
       <h3>${scenario.title}</h3>
       <ol>
         ${scenario.steps.map((step) => `<li>${step}</li>`).join("")}
+      </ol>
+    </article>
+  `).join("");
+}
+
+function renderEmergency() {
+  $("#emergencyList").innerHTML = (CISCO_DATA.emergency || []).map((scenario) => `
+    <article class="scenario emergency-card">
+      <h3>${scenario.title}</h3>
+      <ol>
+        ${scenario.steps.map((step) => `<li>${highlightVariables(step)}</li>`).join("")}
       </ol>
     </article>
   `).join("");
@@ -292,6 +413,10 @@ function escapeAttr(value) {
   return escapeHtml(value).replace(/\n/g, "&#10;");
 }
 
+function highlightVariables(value) {
+  return escapeHtml(value).replace(/(&lt;[^&]+&gt;|\b[A-Z][A-Z0-9_]{2,}\b)/g, '<span class="cmd-var">$1</span>');
+}
+
 function setView(view) {
   state.view = view;
   $$(".view-tab").forEach((tab) => tab.classList.toggle("active", tab.dataset.view === view));
@@ -314,8 +439,14 @@ function init() {
 
   $$(".filter-chip").forEach((button) => {
     button.addEventListener("click", () => {
+      if (button.dataset.favorites) {
+        state.favoritesOnly = !state.favoritesOnly;
+        button.classList.toggle("active", state.favoritesOnly);
+        renderCards();
+        return;
+      }
       state.type = button.dataset.filter;
-      $$(".filter-chip").forEach((chip) => chip.classList.remove("active"));
+      $$(".filter-chip[data-filter]").forEach((chip) => chip.classList.remove("active"));
       button.classList.add("active");
       renderCards();
     });
@@ -351,15 +482,32 @@ function init() {
     button.addEventListener("click", () => askAgent(button.dataset.agentPrompt));
   });
 
+  document.addEventListener("keydown", (event) => {
+    const isTyping = ["INPUT", "TEXTAREA"].includes(document.activeElement.tagName);
+    if ((event.key === "/" && !isTyping) || (event.key.toLowerCase() === "k" && event.ctrlKey)) {
+      event.preventDefault();
+      $("#searchInput").focus();
+      $("#searchInput").select();
+    }
+  });
+
   if (localStorage.getItem("cisco-cli-theme") === "light") {
     document.body.classList.add("light");
   }
 
   render();
   renderScenarios();
+  renderEmergency();
   renderGlossary();
   setAgentOpen(state.agentOpen);
   renderAgentMessage("assistant", "Bonjour, je suis ton agent IA Cisco integre. Pose-moi une question sur une configuration, une verification ou un depannage; je reponds avec les commandes du lexique local.");
+  registerServiceWorker();
+}
+
+function registerServiceWorker() {
+  if ("serviceWorker" in navigator && location.protocol !== "file:") {
+    navigator.serviceWorker.register("./sw.js").catch(() => {});
+  }
 }
 
 init();

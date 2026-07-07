@@ -390,6 +390,96 @@ pre {
   min-height: 86px;
 }
 
+.command-block {
+  display: grid;
+  overflow: hidden;
+  border: 1px solid #293235;
+  background: #0b0f10;
+}
+
+.command-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 38px;
+  padding: 7px 8px 7px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.command-line:last-child {
+  border-bottom: 0;
+}
+
+.command-line code {
+  color: #d8f3dc;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.cmd-var {
+  color: var(--strong);
+  font-weight: 700;
+}
+
+.line-copy {
+  min-width: 66px;
+  min-height: 28px;
+  border: 1px solid #3c484c;
+  background: #142022;
+  color: #e6fff0;
+  font-size: 0.78rem;
+}
+
+.snippet {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  padding: 12px;
+}
+
+.snippet summary {
+  cursor: pointer;
+  color: var(--strong);
+  font-weight: 700;
+}
+
+.snippet-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.snippet-fields label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.snippet-fields input {
+  min-height: 38px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--text);
+  padding: 0 10px;
+  outline: none;
+}
+
+.snippet-fields input:focus {
+  border-color: var(--strong);
+}
+
+.emergency-card {
+  border-top: 4px solid #c2410c;
+}
+
+.emergency-card h3 {
+  color: #ffb38a;
+}
+
 body.light pre {
   background: #142022;
   color: #e6fff0;

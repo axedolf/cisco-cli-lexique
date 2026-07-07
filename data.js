@@ -9,7 +9,9 @@ const CISCO_DATA = {
     { id: "monitoring", name: "Verification et supervision", accent: "#4d6470" },
     { id: "maintenance", name: "Sauvegarde, image et maintenance", accent: "#6b5b2a" },
     { id: "troubleshoot", name: "Depannage", accent: "#a03b16" },
-    { id: "wireless", name: "Notions wireless Cisco", accent: "#007078" }
+    { id: "wireless", name: "Notions wireless Cisco", accent: "#007078" },
+    { id: "programmability", name: "Automatisation et programmabilite", accent: "#5c6bc0" },
+    { id: "emergency", name: "Cheat sheet d'urgence", accent: "#c2410c" }
   ],
   commands: [
     {
@@ -466,6 +468,131 @@ const CISCO_DATA = {
       summary: "Elements frequents a verifier dans une configuration Wi-Fi.",
       commands: ["show running-config | section wlan", "show running-config | section policy profile", "show running-config | section policy tag", "show running-config | section site tag"],
       notes: ["La configuration wireless moderne assemble WLAN, policy profile, policy tag et site tag."]
+    },
+    {
+      theme: "programmability", type: "config", level: "avance",
+      title: "Activer NETCONF sur IOS XE",
+      summary: "Prepare l'equipement pour l'automatisation via NETCONF/YANG.",
+      commands: ["netconf-yang", "ip ssh version 2", "username admin privilege 15 secret <mot-de-passe>", "show platform software yang-management process"],
+      notes: ["Verifier la version IOS XE et les licences avant integration.", "NETCONF utilise generalement SSH sur TCP/830."]
+    },
+    {
+      theme: "programmability", type: "config", level: "avance",
+      title: "Activer RESTCONF sur IOS XE",
+      summary: "Expose une API REST securisee pour lire et modifier la configuration via modeles YANG.",
+      commands: ["ip http secure-server", "restconf", "aaa new-model", "username api privilege 15 secret <mot-de-passe>", "show restconf"],
+      notes: ["RESTCONF doit etre protege par HTTPS et controle d'acces.", "Limiter les sources d'administration avec ACL si possible."]
+    },
+    {
+      theme: "programmability", type: "verify", level: "avance",
+      title: "Verifier communication avec controleur",
+      summary: "Commandes utiles pour diagnostiquer une integration Catalyst Center / DNA ou un outil d'automatisation.",
+      commands: ["show clock detail", "show ip route <controller-ip>", "ping <controller-ip> source <interface>", "show ip http server status", "show logging | include RESTCONF|NETCONF|HTTP|SSH"],
+      notes: ["DNS, NTP, certificat, routage et ACL sont les causes frequentes d'echec d'onboarding."]
+    },
+    {
+      theme: "security", type: "security", level: "avance",
+      title: "Hardening services inutiles",
+      summary: "Desactive les services couramment inutiles ou a risque sur routeurs et switchs.",
+      commands: ["no ip http server", "ip http secure-server", "no service pad", "no ip source-route", "no ip bootp server", "service tcp-keepalives-in", "service tcp-keepalives-out"],
+      notes: ["Ne pas desactiver HTTPS si l'equipement est administre par API, interface web ou controleur.", "Documenter chaque exception de production."]
+    },
+    {
+      theme: "security", type: "security", level: "intermediaire",
+      title: "Limiter CDP/LLDP sur interfaces externes",
+      summary: "Reduit la fuite d'informations de voisinage vers des liens non fiables.",
+      commands: ["interface <interface-name>", "no cdp enable", "no lldp transmit", "no lldp receive"],
+      notes: ["Garder CDP/LLDP peut etre utile en interne; le couper surtout sur WAN, DMZ, clients ou liens operateurs."]
+    },
+    {
+      theme: "emergency", type: "troubleshoot", level: "avance",
+      title: "CPU a 99%",
+      summary: "Checklist courte pour identifier un processus, une tempete ou un debug oublie.",
+      commands: ["show processes cpu sorted 5sec", "show processes cpu history", "show logging | last 50", "show interfaces | include line protocol|input rate|packets input|drops|broadcast", "show platform resources", "undebug all"],
+      notes: ["Arreter les debug en premier si le CPU monte brutalement.", "Chercher boucle L2, storm broadcast, routage instable ou processus de management."]
+    },
+    {
+      theme: "emergency", type: "troubleshoot", level: "avance",
+      title: "Suspicion de boucle reseau",
+      summary: "Commandes rapides pour confirmer une boucle L2 ou une tempete broadcast.",
+      commands: ["show spanning-tree blockedports", "show spanning-tree detail | include ieee|occurr|from|is executing", "show interfaces counters errors", "show mac address-table dynamic | include Gi|Fa|Te", "show storm-control"],
+      notes: ["Eviter les changements massifs sous pression; isoler le lien suspect si l'impact est majeur."]
+    },
+    {
+      theme: "emergency", type: "troubleshoot", level: "avance",
+      title: "Perte de route ou boucle de routage",
+      summary: "Verification express du chemin et des protocoles de routage.",
+      commands: ["show ip route <destination>", "show ip cef <destination>", "traceroute <destination> source <interface>", "show ip protocols", "show ip ospf neighbor", "show ip bgp summary"],
+      notes: ["Comparer la route attendue, la route installee et le next-hop effectivement resolu."]
+    },
+    {
+      theme: "emergency", type: "troubleshoot", level: "avance",
+      title: "Password recovery IOS classique",
+      summary: "Rappel de haut niveau pour recuperation de mot de passe sur plateformes compatibles.",
+      commands: ["rommon> confreg 0x2142", "rommon> reset", "copy startup-config running-config", "enable secret <nouveau-secret>", "config-register 0x2102", "copy running-config startup-config"],
+      notes: ["Procedure dependante du modele et de la politique de securite.", "Planifier une fenetre de maintenance: un redemarrage est generalement necessaire."]
+    }
+  ],
+  snippets: [
+    {
+      commandTitle: "Creer et nommer des VLAN",
+      title: "Generateur VLAN",
+      fields: [
+        { key: "vlan", label: "VLAN ID", value: "10" },
+        { key: "name", label: "Nom VLAN", value: "USERS" }
+      ],
+      template: ["vlan {{vlan}}", "name {{name}}"]
+    },
+    {
+      commandTitle: "Affecter un port a un VLAN d'acces",
+      title: "Port d'acces",
+      fields: [
+        { key: "interface", label: "Interface", value: "gigabitEthernet1/0/10" },
+        { key: "vlan", label: "VLAN data", value: "10" }
+      ],
+      template: ["interface {{interface}}", "switchport mode access", "switchport access vlan {{vlan}}", "spanning-tree portfast"]
+    },
+    {
+      commandTitle: "Configurer un trunk 802.1Q",
+      title: "Trunk 802.1Q",
+      fields: [
+        { key: "interface", label: "Interface", value: "gigabitEthernet1/0/48" },
+        { key: "vlans", label: "VLAN autorises", value: "10,20,99" },
+        { key: "native", label: "Native VLAN", value: "999" }
+      ],
+      template: ["interface {{interface}}", "switchport mode trunk", "switchport trunk allowed vlan {{vlans}}", "switchport trunk native vlan {{native}}", "switchport nonegotiate"]
+    },
+    {
+      commandTitle: "Inter-VLAN routing par SVI",
+      title: "SVI inter-VLAN",
+      fields: [
+        { key: "vlan", label: "VLAN ID", value: "10" },
+        { key: "ip", label: "Passerelle", value: "192.168.10.1" },
+        { key: "mask", label: "Masque", value: "255.255.255.0" }
+      ],
+      template: ["ip routing", "interface vlan {{vlan}}", "ip address {{ip}} {{mask}}", "no shutdown"]
+    },
+    {
+      commandTitle: "Serveur DHCP IPv4 local",
+      title: "Pool DHCP",
+      fields: [
+        { key: "pool", label: "Nom pool", value: "VLAN10-USERS" },
+        { key: "network", label: "Reseau", value: "192.168.10.0" },
+        { key: "mask", label: "Masque", value: "255.255.255.0" },
+        { key: "gateway", label: "Passerelle", value: "192.168.10.1" },
+        { key: "dns", label: "DNS", value: "1.1.1.1" }
+      ],
+      template: ["ip dhcp pool {{pool}}", "network {{network}} {{mask}}", "default-router {{gateway}}", "dns-server {{dns}}"]
+    },
+    {
+      commandTitle: "Activer SSH version 2",
+      title: "SSH securise",
+      fields: [
+        { key: "domain", label: "Domaine", value: "exemple.local" },
+        { key: "user", label: "Utilisateur", value: "admin" },
+        { key: "secret", label: "Secret", value: "MOT_DE_PASSE_FORT" }
+      ],
+      template: ["ip domain-name {{domain}}", "username {{user}} privilege 15 secret {{secret}}", "crypto key generate rsa modulus 2048", "ip ssh version 2", "line vty 0 15", "transport input ssh", "login local"]
     }
   ],
   scenarios: [
@@ -508,6 +635,41 @@ const CISCO_DATA = {
         "Exporter vers TFTP/SCP avec nom incluant equipement et date.",
         "Verifier le fichier exporte et noter l'image de boot actuelle."
       ]
+    },
+    {
+      title: "Durcir un equipement avant mise en production",
+      steps: [
+        "Activer SSH v2, comptes nominatifs ou AAA avec secours local.",
+        "Limiter les sources d'administration avec ACL sur les lignes VTY.",
+        "Desactiver les services inutiles et documenter les exceptions.",
+        "Activer NTP, syslog distant et horodatage precis.",
+        "Appliquer BPDU Guard, DHCP Snooping ou port-security selon le role des ports.",
+        "Sauvegarder la configuration et tester un acces de secours."
+      ]
+    },
+    {
+      title: "Preparer un equipement IOS XE pour automatisation",
+      steps: [
+        "Verifier routage, DNS et NTP vers le controleur ou l'outil d'automatisation.",
+        "Activer SSH et un compte d'administration controle.",
+        "Activer NETCONF ou RESTCONF selon le besoin.",
+        "Limiter l'acces API avec ACL, VRF de management ou politique AAA.",
+        "Tester la disponibilite avec show restconf, show platform software yang-management process et les logs."
+      ]
+    }
+  ],
+  emergency: [
+    {
+      title: "Incident CPU eleve",
+      steps: ["undebug all", "show processes cpu sorted 5sec", "show processes cpu history", "show logging | last 50", "show interfaces | include input rate|broadcast|drops"]
+    },
+    {
+      title: "Incident port coupe",
+      steps: ["show interfaces status err-disabled", "show logging | include ERR|disabled", "show port-security interface <interface-name>", "show spanning-tree interface <interface-name> detail", "shutdown / no shutdown seulement apres diagnostic"]
+    },
+    {
+      title: "Incident routage",
+      steps: ["show ip route <destination>", "show ip cef <destination>", "traceroute <destination> source <interface>", "show ip protocols", "show ip ospf neighbor / show ip bgp summary selon protocole"]
     }
   ],
   glossary: [

@@ -3,7 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101416">
+  <meta name="description" content="Lexique Cisco CLI avec fiches, procedures, agent local, favoris et generateurs de configuration.">
   <title>Lexique Cisco CLI</title>
+  <link rel="manifest" href="./manifest.webmanifest">
   <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
@@ -34,6 +37,7 @@
         <button class="filter-chip" data-filter="verify">Verification</button>
         <button class="filter-chip" data-filter="troubleshoot">Depannage</button>
         <button class="filter-chip" data-filter="security">Securite</button>
+        <button class="filter-chip" id="favoritesFilter" data-favorites="true">Favoris</button>
       </div>
       <nav id="themeNav" class="theme-nav"></nav>
     </aside>
@@ -55,6 +59,7 @@
       <section class="toolbar">
         <div class="view-tabs" role="tablist" aria-label="Vues">
           <button class="view-tab active" data-view="cards">Fiches</button>
+          <button class="view-tab" data-view="emergency">Urgence</button>
           <button class="view-tab" data-view="scenarios">Procedures</button>
           <button class="view-tab" data-view="glossary">Glossaire</button>
         </div>
@@ -68,6 +73,10 @@
 
       <section id="cardsView" class="view-panel active">
         <div id="cardsGrid" class="cards-grid"></div>
+      </section>
+
+      <section id="emergencyView" class="view-panel">
+        <div id="emergencyList" class="scenario-list"></div>
       </section>
 
       <section id="scenariosView" class="view-panel">
@@ -94,6 +103,8 @@
       <button data-agent-prompt="Donne-moi une procedure pour creer des VLAN et un trunk.">VLAN + trunk</button>
       <button data-agent-prompt="Comment depanner un port err-disabled ?">Err-disabled</button>
       <button data-agent-prompt="Commandes pour verifier OSPF.">OSPF</button>
+      <button data-agent-prompt="Que faire si le CPU est a 99% ?">CPU 99%</button>
+      <button data-agent-prompt="Comment activer NETCONF RESTCONF sur IOS XE ?">NETCONF</button>
     </div>
     <form id="agentForm" class="agent-form">
       <input id="agentInput" type="text" placeholder="Pose une question: ex. configurer DHCP, verifier trunk, securiser un port..." autocomplete="off">

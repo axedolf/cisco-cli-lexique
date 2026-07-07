@@ -25,6 +25,16 @@ et propose des commandes Cisco pertinentes selon la question. Il fonctionne sans
 connexion externe. Pour brancher une IA generative reelle, il faudra ajouter une
 API securisee cote serveur afin de ne pas exposer de cle dans le navigateur.
 
+## Fonctions ajoutees
+
+- Copie ligne par ligne ou par bloc de configuration.
+- Variables mises en evidence dans les commandes.
+- Raccourcis clavier: `/` ou `Ctrl+K` pour focaliser la recherche.
+- Favoris conserves dans le navigateur.
+- Generateurs interactifs pour VLAN, trunk, SVI, DHCP et SSH.
+- Vue urgence pour les incidents CPU, port coupe et routage.
+- Mode PWA: cache hors-ligne apres une premiere visite depuis le site publie.
+
 ## Source et prudence
 
 Base inspiree du projet open source:
