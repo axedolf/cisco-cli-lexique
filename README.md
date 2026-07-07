@@ -34,6 +34,7 @@ API securisee cote serveur afin de ne pas exposer de cle dans le navigateur.
 - Generateurs interactifs pour VLAN, trunk, SVI, DHCP et SSH.
 - Vue urgence pour les incidents CPU, port coupe et routage.
 - Mode PWA: cache hors-ligne apres une premiere visite depuis le site publie.
+- Section materiel et PoE: CPU, memoire, temperature, ventilateurs, alimentations, budget PoE, etat PoE par port, activation/desactivation PoE.
 
 ## Source et prudence
 

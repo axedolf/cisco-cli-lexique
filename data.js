@@ -7,6 +7,7 @@ const CISCO_DATA = {
     { id: "services", name: "Services reseau", accent: "#0b6bcb" },
     { id: "security", name: "Securite et durcissement", accent: "#9b1c31" },
     { id: "monitoring", name: "Verification et supervision", accent: "#4d6470" },
+    { id: "hardware", name: "Materiel, energie et PoE", accent: "#0f766e" },
     { id: "maintenance", name: "Sauvegarde, image et maintenance", accent: "#6b5b2a" },
     { id: "troubleshoot", name: "Depannage", accent: "#a03b16" },
     { id: "wireless", name: "Notions wireless Cisco", accent: "#007078" },
@@ -393,6 +394,69 @@ const CISCO_DATA = {
       notes: ["terminal monitor affiche les logs dans une session SSH/Telnet."]
     },
     {
+      theme: "hardware", type: "verify", level: "base",
+      title: "Etat materiel general",
+      summary: "Controle le modele, l'inventaire, l'image, l'uptime et les ressources principales.",
+      commands: ["show version", "show inventory", "show license summary", "show platform", "show module", "show redundancy"],
+      notes: ["Toutes les commandes ne sont pas disponibles sur tous les modeles.", "show platform et show module sont surtout utiles sur Catalyst modulaires ou IOS XE."]
+    },
+    {
+      theme: "hardware", type: "verify", level: "base",
+      title: "CPU et memoire",
+      summary: "Identifie une saturation CPU ou memoire et les processus responsables.",
+      commands: ["show processes cpu sorted 5sec", "show processes cpu history", "show processes memory sorted", "show platform resources", "show platform software status control-processor brief"],
+      notes: ["Sur IOS XE, les commandes platform donnent souvent une vision plus detaillee par processeur ou conteneur logiciel."]
+    },
+    {
+      theme: "hardware", type: "verify", level: "base",
+      title: "Temperature, ventilateurs et alimentations",
+      summary: "Controle l'etat environnemental: temperature, fans, alimentations et alertes chassis.",
+      commands: ["show environment all", "show environment temperature", "show environment fan", "show environment power", "show logging | include TEMP|FAN|POWER|PS|ENV"],
+      notes: ["La syntaxe varie selon Catalyst, ISR, ASR et Nexus.", "Toute alarme temperature ou alimentation doit etre correlee avec les logs et l'etat physique."]
+    },
+    {
+      theme: "hardware", type: "verify", level: "intermediaire",
+      title: "Etat PoE global du switch",
+      summary: "Affiche le budget PoE total, la puissance consommee et la puissance restante.",
+      commands: ["show power inline", "show power inline police", "show environment power", "show logging | include ILPOWER|POWER|PoE|poe"],
+      notes: ["show power inline est la commande de reference sur de nombreux switchs Catalyst.", "Verifier le budget restant avant d'ajouter camera, telephone IP ou borne Wi-Fi."]
+    },
+    {
+      theme: "hardware", type: "verify", level: "intermediaire",
+      title: "Etat PoE par port",
+      summary: "Verifie si un port fournit du PoE, la classe detectee et la puissance allouee.",
+      commands: ["show power inline <interface-name>", "show interfaces <interface-name> status", "show interfaces <interface-name> switchport", "show logging | include <interface-name>|ILPOWER"],
+      notes: ["Remplacer <interface-name> par gi1/0/10, te1/0/1, etc.", "Si le port est administrativement down, le PoE peut aussi etre coupe selon plateforme et configuration."]
+    },
+    {
+      theme: "hardware", type: "config", level: "intermediaire",
+      title: "Activer ou desactiver PoE sur un port",
+      summary: "Controle l'alimentation PoE au niveau d'une interface switch.",
+      commands: ["interface <interface-name>", "power inline auto", "power inline never", "power inline static max <milliwatts>"],
+      notes: ["power inline auto active la negociation PoE automatique.", "power inline never coupe le PoE sur le port.", "power inline static max limite la puissance; verifier le support modele/IOS."]
+    },
+    {
+      theme: "hardware", type: "config", level: "intermediaire",
+      title: "Redemarrer un equipement alimente en PoE",
+      summary: "Coupe puis reactive le PoE d'un port pour redemarrer telephone IP, camera ou borne Wi-Fi.",
+      commands: ["interface <interface-name>", "power inline never", "power inline auto"],
+      notes: ["A utiliser avec prudence: cela coupe physiquement l'equipement raccorde.", "Attendre quelques secondes entre coupure et reactivation si l'equipement ne redemarre pas correctement."]
+    },
+    {
+      theme: "hardware", type: "troubleshoot", level: "avance",
+      title: "Depanner une panne PoE",
+      summary: "Checklist pour un telephone, une camera ou une borne qui ne s'alimente pas.",
+      commands: ["show power inline", "show power inline <interface-name>", "show logging | include ILPOWER|POWER|PoE|<interface-name>", "show interfaces <interface-name> status", "show interfaces <interface-name> counters errors", "test cable-diagnostics tdr interface <interface-name>", "show cable-diagnostics tdr interface <interface-name>"],
+      notes: ["Verifier budget PoE, cable, classe PoE, modele d'alimentation et messages ILPOWER.", "Les commandes TDR peuvent couper brievement le lien selon plateforme; a utiliser prudemment."]
+    },
+    {
+      theme: "hardware", type: "verify", level: "avance",
+      title: "Stack, alimentation redondante et modules",
+      summary: "Controle un stack Catalyst, les membres, les alimentations et les modules transceivers.",
+      commands: ["show switch", "show switch stack-ports", "show environment stack", "show inventory", "show interfaces transceiver detail", "show logging | include STACK|SFP|GBIC|POWER"],
+      notes: ["Sur StackWise, verifier role active/standby, priorite, etat des stack-ports et versions logicielles."]
+    },
+    {
       theme: "maintenance", type: "config", level: "base",
       title: "Sauvegarder vers TFTP",
       summary: "Copie la configuration vers un serveur TFTP.",
@@ -593,6 +657,16 @@ const CISCO_DATA = {
         { key: "secret", label: "Secret", value: "MOT_DE_PASSE_FORT" }
       ],
       template: ["ip domain-name {{domain}}", "username {{user}} privilege 15 secret {{secret}}", "crypto key generate rsa modulus 2048", "ip ssh version 2", "line vty 0 15", "transport input ssh", "login local"]
+    },
+    {
+      commandTitle: "Activer ou desactiver PoE sur un port",
+      title: "Controle PoE par port",
+      fields: [
+        { key: "interface", label: "Interface", value: "gigabitEthernet1/0/10" },
+        { key: "mode", label: "Mode PoE", value: "auto" },
+        { key: "max", label: "Max mW optionnel", value: "30000" }
+      ],
+      template: ["interface {{interface}}", "power inline {{mode}}", "! Option si supporte par le modele:", "power inline static max {{max}}"]
     }
   ],
   scenarios: [
@@ -656,6 +730,17 @@ const CISCO_DATA = {
         "Limiter l'acces API avec ACL, VRF de management ou politique AAA.",
         "Tester la disponibilite avec show restconf, show platform software yang-management process et les logs."
       ]
+    },
+    {
+      title: "Diagnostiquer un probleme PoE terrain",
+      steps: [
+        "Verifier le budget global avec show power inline.",
+        "Verifier le port cible avec show power inline <interface-name>.",
+        "Controler l'etat du lien et les erreurs interface.",
+        "Lire les logs ILPOWER/POWER pour detecter budget insuffisant, classe non reconnue ou defaut cable.",
+        "Tester power inline never puis power inline auto seulement si une coupure de l'equipement est acceptable.",
+        "Si necessaire, utiliser le diagnostic TDR cable en fenetre adaptee."
+      ]
     }
   ],
   emergency: [
@@ -670,6 +755,10 @@ const CISCO_DATA = {
     {
       title: "Incident routage",
       steps: ["show ip route <destination>", "show ip cef <destination>", "traceroute <destination> source <interface>", "show ip protocols", "show ip ospf neighbor / show ip bgp summary selon protocole"]
+    },
+    {
+      title: "Incident PoE",
+      steps: ["show power inline", "show power inline <interface-name>", "show logging | include ILPOWER|POWER|PoE", "show environment power", "interface <interface-name> puis power inline never / power inline auto si redemarrage accepte"]
     }
   ],
   glossary: [
