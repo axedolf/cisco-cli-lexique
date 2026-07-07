@@ -4,6 +4,7 @@ const CISCO_DATA = {
     { id: "interfaces", name: "Interfaces physiques et logiques", accent: "#536d25" },
     { id: "switching", name: "Switching, VLAN et trunks", accent: "#8a5b13" },
     { id: "routing", name: "Routage IPv4/IPv6", accent: "#6750a4" },
+    { id: "ospf", name: "Gestion OSPF", accent: "#7c3aed" },
     { id: "services", name: "Services reseau", accent: "#0b6bcb" },
     { id: "security", name: "Securite et durcissement", accent: "#9b1c31" },
     { id: "monitoring", name: "Verification et supervision", accent: "#4d6470" },
@@ -214,18 +215,84 @@ const CISCO_DATA = {
       notes: ["CEF montre le chemin de transfert effectif sur beaucoup de plateformes."]
     },
     {
-      theme: "routing", type: "config", level: "intermediaire",
+      theme: "ospf", type: "config", level: "intermediaire",
       title: "OSPFv2 simple aire 0",
       summary: "Active OSPF et annonce des reseaux IPv4.",
       commands: ["router ospf 10", "router-id 1.1.1.1", "network 10.0.0.0 0.0.0.255 area 0", "network 192.168.10.0 0.0.0.255 area 0", "passive-interface default", "no passive-interface gigabitEthernet0/0"],
+      aliases: ["qspf", "ospf configuration", "aire 0", "area 0", "routage ospf"],
       notes: ["Le wildcard mask est l'inverse du masque reseau.", "passive-interface limite les voisinages non souhaites."]
     },
     {
-      theme: "routing", type: "verify", level: "intermediaire",
+      theme: "ospf", type: "verify", level: "intermediaire",
       title: "Verifier OSPF",
       summary: "Controle voisins, interfaces, LSDB et routes OSPF.",
       commands: ["show ip ospf neighbor", "show ip ospf interface brief", "show ip protocols", "show ip route ospf", "show ip ospf database"],
+      aliases: ["qspf", "voisin ospf", "neighbor ospf", "routes ospf", "etat ospf"],
       notes: ["Si un voisin reste en INIT ou EXSTART, verifier MTU, area, timers, auth et type de reseau."]
+    },
+    {
+      theme: "ospf", type: "config", level: "intermediaire",
+      title: "Activer OSPF directement sur interfaces",
+      summary: "Configure OSPF au niveau de l'interface au lieu d'utiliser uniquement les commandes network.",
+      commands: ["router ospf 10", "router-id 1.1.1.1", "interface gigabitEthernet0/0", "ip ospf 10 area 0", "interface vlan 10", "ip ospf 10 area 10"],
+      aliases: ["ospf interface", "ip ospf area", "activer ospf port", "ospf svi"],
+      notes: ["Cette methode evite les erreurs de wildcard mask.", "Tres pratique sur SVI, liens point-a-point et interfaces routees."]
+    },
+    {
+      theme: "ospf", type: "config", level: "intermediaire",
+      title: "Gerance des interfaces passives OSPF",
+      summary: "Annonce des reseaux sans former de voisinage sur les ports utilisateurs.",
+      commands: ["router ospf 10", "passive-interface default", "no passive-interface gigabitEthernet0/0", "no passive-interface port-channel1", "show ip protocols | include Passive|Routing for Networks"],
+      aliases: ["passive interface ospf", "interface passive", "voisinage ospf", "securiser ospf"],
+      notes: ["Bonne pratique: rendre passif par defaut, puis ouvrir seulement les liens vers routeurs voisins.", "Une interface passive annonce le reseau mais n'envoie pas de hello OSPF."]
+    },
+    {
+      theme: "ospf", type: "config", level: "avance",
+      title: "Cout OSPF, priorite et type de reseau",
+      summary: "Influence le chemin choisi, l'election DR/BDR et le comportement de voisinage.",
+      commands: ["interface <interface-name>", "ip ospf cost <cost>", "ip ospf priority <0-255>", "ip ospf network point-to-point", "auto-cost reference-bandwidth 100000", "show ip ospf interface <interface-name>"],
+      aliases: ["cost ospf", "cout ospf", "dr bdr", "priority ospf", "point-to-point ospf"],
+      notes: ["Configurer auto-cost reference-bandwidth de facon coherente sur tous les routeurs OSPF.", "priority 0 empeche une interface de devenir DR/BDR."]
+    },
+    {
+      theme: "ospf", type: "config", level: "avance",
+      title: "Annoncer une route par defaut dans OSPF",
+      summary: "Diffuse une route 0.0.0.0/0 vers les routeurs internes.",
+      commands: ["ip route 0.0.0.0 0.0.0.0 <next-hop>", "router ospf 10", "default-information originate", "default-information originate always", "show ip route ospf | include 0.0.0.0"],
+      aliases: ["default route ospf", "route par defaut ospf", "default-information originate"],
+      notes: ["Sans always, la route par defaut doit exister dans la table de routage locale.", "Utiliser always avec prudence pour eviter d'annoncer une sortie Internet inexistante."]
+    },
+    {
+      theme: "ospf", type: "config", level: "avance",
+      title: "Redistribution vers OSPF",
+      summary: "Injecte des routes statiques, connectees ou d'un autre protocole dans OSPF.",
+      commands: ["router ospf 10", "redistribute static subnets", "redistribute connected subnets", "default-metric 20", "show ip ospf database external", "show ip route ospf"],
+      aliases: ["redistribute ospf", "redistribution ospf", "routes externes ospf", "lsa type 5"],
+      notes: ["Toujours filtrer ou taguer en production avec route-map/prefix-list si necessaire.", "Sans subnets, certains prefixes classless peuvent ne pas etre redistribues."]
+    },
+    {
+      theme: "ospf", type: "security", level: "avance",
+      title: "Authentification OSPF",
+      summary: "Protege les voisinages OSPF avec une cle d'authentification.",
+      commands: ["interface <interface-name>", "ip ospf authentication message-digest", "ip ospf message-digest-key 1 md5 <cle-secrete>", "show ip ospf interface <interface-name>", "show ip ospf neighbor"],
+      aliases: ["auth ospf", "authentication ospf", "md5 ospf", "securite ospf"],
+      notes: ["La cle doit correspondre des deux cotes du lien.", "Selon les versions, privilegier les mecanismes cryptographiques plus modernes si disponibles."]
+    },
+    {
+      theme: "ospf", type: "verify", level: "avance",
+      title: "Diagnostiquer les voisins OSPF bloques",
+      summary: "Analyse les etats DOWN, INIT, 2-WAY, EXSTART, EXCHANGE et FULL.",
+      commands: ["show ip ospf neighbor detail", "show ip ospf interface <interface-name>", "show ip protocols", "show logging | include OSPF|ADJCHG|Neighbor", "show interfaces <interface-name> | include MTU|line protocol|Internet address", "debug ip ospf adj", "undebug all"],
+      aliases: ["depannage ospf", "ospf stuck exstart", "ospf init", "voisin ospf bloque", "debug ospf"],
+      notes: ["Verifier dans l'ordre: lien up, IP/masque, area, timers, MTU, authentification, type de reseau et ACL.", "Utiliser debug avec prudence sur equipement charge."]
+    },
+    {
+      theme: "ospf", type: "config", level: "avance",
+      title: "OSPFv3 pour IPv6",
+      summary: "Active OSPF pour IPv6 avec OSPFv3.",
+      commands: ["ipv6 unicast-routing", "ipv6 router ospf 10", "router-id 1.1.1.1", "interface gigabitEthernet0/0", "ipv6 ospf 10 area 0", "show ipv6 ospf neighbor", "show ipv6 route ospf"],
+      aliases: ["ospfv3", "ospf ipv6", "ipv6 ospf", "qspf ipv6"],
+      notes: ["OSPFv3 utilise toujours un router-id au format IPv4.", "Verifier les adresses link-local et l'activation IPv6 sur l'interface."]
     },
     {
       theme: "routing", type: "config", level: "avance",
@@ -781,6 +848,37 @@ const CISCO_DATA = {
         { key: "interface", label: "Interface source", value: "vlan99" }
       ],
       template: ["ping {{destination}} source vlan {{vlan}}", "ping {{destination}} source {{interface}}", "traceroute {{destination}} source {{interface}}", "show ip route {{destination}}"]
+    },
+    {
+      commandTitle: "OSPFv2 simple aire 0",
+      title: "OSPF aire 0",
+      fields: [
+        { key: "process", label: "Process ID", value: "10" },
+        { key: "routerid", label: "Router ID", value: "1.1.1.1" },
+        { key: "network", label: "Reseau", value: "192.168.10.0" },
+        { key: "wildcard", label: "Wildcard", value: "0.0.0.255" },
+        { key: "uplink", label: "Interface voisin", value: "gigabitEthernet0/0" }
+      ],
+      template: ["router ospf {{process}}", "router-id {{routerid}}", "network {{network}} {{wildcard}} area 0", "passive-interface default", "no passive-interface {{uplink}}"]
+    },
+    {
+      commandTitle: "Activer OSPF directement sur interfaces",
+      title: "OSPF par interface",
+      fields: [
+        { key: "process", label: "Process ID", value: "10" },
+        { key: "interface", label: "Interface", value: "vlan10" },
+        { key: "area", label: "Area", value: "0" }
+      ],
+      template: ["router ospf {{process}}", "interface {{interface}}", "ip ospf {{process}} area {{area}}", "show ip ospf interface {{interface}}", "show ip ospf neighbor"]
+    },
+    {
+      commandTitle: "Annoncer une route par defaut dans OSPF",
+      title: "Default route OSPF",
+      fields: [
+        { key: "nextHop", label: "Next-hop", value: "203.0.113.1" },
+        { key: "process", label: "Process ID", value: "10" }
+      ],
+      template: ["ip route 0.0.0.0 0.0.0.0 {{nextHop}}", "router ospf {{process}}", "default-information originate", "show ip route ospf | include 0.0.0.0"]
     }
   ],
   scenarios: [
@@ -875,6 +973,27 @@ const CISCO_DATA = {
         "Si besoin, utiliser ping etendu pour regler source, taille, repetitions et bit DF.",
         "Comparer avec traceroute source et verifier ACL, VRF, NAT ou firewall si le ping echoue."
       ]
+    },
+    {
+      title: "Mettre en place OSPF entre deux equipements",
+      steps: [
+        "Verifier les interfaces et IP: show ip interface brief.",
+        "Configurer router ospf <process-id> et router-id stable.",
+        "Annoncer les reseaux avec network ou ip ospf <process-id> area <area-id> sur interface.",
+        "Mettre passive-interface default puis no passive-interface seulement sur les liens de voisinage.",
+        "Verifier show ip ospf neighbor, show ip ospf interface brief, show ip route ospf.",
+        "Documenter area, couts, authentification et route par defaut si utilisee."
+      ]
+    },
+    {
+      title: "Depanner un voisin OSPF qui ne passe pas FULL",
+      steps: [
+        "Verifier que le lien est up/up et dans le bon VLAN ou la bonne interface routee.",
+        "Comparer area, masque IP, timers hello/dead, MTU, type de reseau et authentification.",
+        "Lire show ip ospf neighbor detail et show ip ospf interface <interface-name>.",
+        "Chercher les logs OSPF ADJCHG puis utiliser debug ip ospf adj uniquement si necessaire.",
+        "Verifier ACL, passive-interface, VRF et filtrage multicast 224.0.0.5/224.0.0.6."
+      ]
     }
   ],
   emergency: [
@@ -901,6 +1020,10 @@ const CISCO_DATA = {
     {
       title: "Ping depuis le bon VLAN",
       steps: ["show ip interface brief | include Vlan<vlan-id>", "show ip route <destination-ip>", "ping <destination-ip> source vlan <vlan-id>", "traceroute <destination-ip> source vlan <vlan-id>", "verifier ACL/VRF/route retour si echec"]
+    },
+    {
+      title: "Incident OSPF",
+      steps: ["show ip ospf neighbor detail", "show ip ospf interface brief", "show ip route ospf", "show logging | include OSPF|ADJCHG", "verifier area, timers, MTU, auth, passive-interface", "debug ip ospf adj puis undebug all si necessaire"]
     }
   ],
   glossary: [
