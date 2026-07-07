@@ -70,10 +70,11 @@ function matchesSearch(item, query) {
 
 function filteredCommands() {
   const q = normalize(state.query.trim());
+  const hasQuery = q.length > 0;
   return CISCO_DATA.commands.filter((item) => {
     const id = commandId(item);
-    const matchesTheme = state.theme === "all" || item.theme === state.theme;
-    const matchesType = state.type === "all" || item.type === state.type;
+    const matchesTheme = hasQuery || state.theme === "all" || item.theme === state.theme;
+    const matchesType = hasQuery || state.type === "all" || item.type === state.type;
     const matchesLevel = state.level === "all" || item.level === state.level;
     const matchesFavorites = !state.favoritesOnly || state.favorites.has(id);
     const matchesQuery = matchesSearch(item, q);
