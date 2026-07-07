@@ -20,7 +20,7 @@ function normalize(value) {
 }
 
 function commandText(item) {
-  return [item.title, item.summary, item.theme, item.type, item.level, item.commands.join(" "), item.notes.join(" ")].join(" ");
+  return [item.title, item.summary, item.theme, item.type, item.level, item.commands.join(" "), item.notes.join(" "), (item.aliases || []).join(" ")].join(" ");
 }
 
 function tokenize(value) {
@@ -68,10 +68,30 @@ function matchesSearch(item, query) {
   });
 }
 
+function searchScore(item, query) {
+  if (!query) return 0;
+  const title = normalize(item.title);
+  const summary = normalize(item.summary);
+  const aliases = normalize((item.aliases || []).join(" "));
+  const commands = normalize(item.commands.join(" "));
+  let score = 0;
+  if (title.includes(query)) score += 120;
+  if (aliases.includes(query)) score += 110;
+  if (commands.includes(query)) score += 70;
+  if (summary.includes(query)) score += 50;
+  for (const word of tokenize(query)) {
+    if (title.includes(word)) score += 18;
+    if (aliases.includes(word)) score += 16;
+    if (commands.includes(word)) score += 10;
+    if (summary.includes(word)) score += 8;
+  }
+  return score;
+}
+
 function filteredCommands() {
   const q = normalize(state.query.trim());
   const hasQuery = q.length > 0;
-  return CISCO_DATA.commands.filter((item) => {
+  const results = CISCO_DATA.commands.filter((item) => {
     const id = commandId(item);
     const matchesTheme = hasQuery || state.theme === "all" || item.theme === state.theme;
     const matchesType = hasQuery || state.type === "all" || item.type === state.type;
@@ -80,6 +100,10 @@ function filteredCommands() {
     const matchesQuery = matchesSearch(item, q);
     return matchesTheme && matchesType && matchesLevel && matchesFavorites && matchesQuery;
   });
+  if (hasQuery) {
+    results.sort((a, b) => searchScore(b, q) - searchScore(a, q));
+  }
+  return results;
 }
 
 function commandId(item) {

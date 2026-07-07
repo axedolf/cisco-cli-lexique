@@ -7,6 +7,8 @@ const CISCO_DATA = {
     { id: "services", name: "Services reseau", accent: "#0b6bcb" },
     { id: "security", name: "Securite et durcissement", accent: "#9b1c31" },
     { id: "monitoring", name: "Verification et supervision", accent: "#4d6470" },
+    { id: "discovery", name: "Equipements connectes aux ports", accent: "#2563eb" },
+    { id: "connectivity", name: "Tests ping et connectivite", accent: "#15803d" },
     { id: "hardware", name: "Materiel, energie et PoE", accent: "#0f766e" },
     { id: "maintenance", name: "Sauvegarde, image et maintenance", accent: "#6b5b2a" },
     { id: "troubleshoot", name: "Depannage", accent: "#a03b16" },
@@ -380,6 +382,90 @@ const CISCO_DATA = {
       notes: ["Utile avec telephones, hyperviseurs et equipements non Cisco."]
     },
     {
+      theme: "discovery", type: "verify", level: "base",
+      title: "Voir les equipements connectes par port avec CDP/LLDP",
+      summary: "Identifie les voisins directement branches sur les ports: switchs, routeurs, telephones IP, bornes Wi-Fi, firewalls ou hyperviseurs.",
+      commands: ["show cdp neighbors", "show cdp neighbors detail", "show cdp neighbors interface <interface-name> detail", "show lldp neighbors", "show lldp neighbors detail", "show lldp neighbors interface <interface-name> detail"],
+      aliases: ["qui est branche", "equipement connecte port", "voisin port", "adresse ip voisin", "device connected port"],
+      notes: ["CDP donne souvent le nom, le modele, l'interface distante et parfois l'adresse IP de management.", "LLDP est standard et utile pour les equipements non Cisco.", "Si rien ne remonte, verifier que CDP/LLDP est active localement et sur l'equipement voisin."]
+    },
+    {
+      theme: "discovery", type: "verify", level: "base",
+      title: "Trouver les adresses MAC connectees a un port",
+      summary: "Liste les adresses MAC apprises sur un port pour savoir quels equipements communiquent derriere ce lien.",
+      commands: ["show mac address-table interface <interface-name>", "show mac address-table dynamic interface <interface-name>", "show mac address-table dynamic vlan <vlan-id>", "show mac address-table address <mac-address>", "show interfaces <interface-name> switchport"],
+      aliases: ["mac port", "equipement port", "poste branche", "adresse mac interface", "ip port"],
+      notes: ["Sur un port access classique, une ou quelques MAC sont attendues.", "Sur un trunk, un uplink ou un port vers hyperviseur, il peut y avoir beaucoup de MAC.", "La table MAC donne la presence L2, pas directement l'adresse IP."]
+    },
+    {
+      theme: "discovery", type: "verify", level: "intermediaire",
+      title: "Associer MAC et adresse IP avec ARP",
+      summary: "Fait le lien entre une adresse MAC vue sur un port et son adresse IP si l'equipement L3 connait l'ARP.",
+      commands: ["show ip arp", "show ip arp <ip-address>", "show ip arp | include <mac-address>", "show arp | include <mac-address>", "show ip route <ip-address>"],
+      aliases: ["trouver ip depuis mac", "mac vers ip", "adresse ip port", "arp mac ip"],
+      notes: ["ARP est visible sur le routeur ou le switch L3 qui porte la passerelle du VLAN.", "Sur un switch purement L2, il faut interroger la passerelle ou le routeur du VLAN.", "Generer du trafic, par exemple un ping, peut rafraichir l'entree ARP."]
+    },
+    {
+      theme: "discovery", type: "verify", level: "intermediaire",
+      title: "Identifier un poste depuis son IP",
+      summary: "Retrouve le port d'un equipement a partir de son adresse IP en combinant ARP et table MAC.",
+      commands: ["show ip arp <ip-address>", "show ip arp | include <ip-address>", "show mac address-table address <mac-address>", "show interfaces <interface-name> status", "show interfaces <interface-name> description"],
+      aliases: ["trouver port depuis ip", "ip vers port", "poste ip port", "adresse ip equipement"],
+      notes: ["Methode: IP vers MAC avec ARP, puis MAC vers port avec la table MAC.", "Si la MAC pointe vers un trunk, continuer la recherche sur le switch voisin indique par CDP/LLDP.", "Verifier que l'IP est dans le bon VLAN et que l'entree ARP n'est pas obsolete."]
+    },
+    {
+      theme: "discovery", type: "verify", level: "intermediaire",
+      title: "Voir les clients DHCP connus",
+      summary: "Affiche les baux DHCP distribues par l'equipement Cisco ou les bindings appris par DHCP Snooping.",
+      commands: ["show ip dhcp binding", "show ip dhcp pool", "show ip dhcp server statistics", "show ip dhcp snooping binding", "show ip dhcp snooping binding interface <interface-name>", "show running-config | section dhcp"],
+      aliases: ["liste ip clients", "client connecte ip", "binding dhcp port", "ip mac vlan interface"],
+      notes: ["show ip dhcp binding ne fonctionne que si l'equipement fait serveur DHCP.", "DHCP Snooping peut donner MAC, IP, VLAN et interface sur les switchs ou la fonction est active.", "Les IP statiques ne seront pas forcement visibles dans les bindings DHCP."]
+    },
+    {
+      theme: "discovery", type: "troubleshoot", level: "avance",
+      title: "Remonter un equipement a travers plusieurs switchs",
+      summary: "Suit une adresse MAC de switch en switch jusqu'au port final.",
+      commands: ["show mac address-table address <mac-address>", "show cdp neighbors interface <uplink-interface> detail", "show lldp neighbors interface <uplink-interface> detail", "show interfaces trunk", "show spanning-tree vlan <vlan-id>"],
+      notes: ["Si la MAC est apprise sur un uplink ou un port-channel, se connecter au switch voisin et repeter la recherche.", "Tenir compte des port-channels: verifier aussi show etherchannel summary.", "Dans un environnement empile ou chassise, le nom d'interface indique souvent le membre de stack."]
+    },
+    {
+      theme: "connectivity", type: "troubleshoot", level: "base",
+      title: "Ping simple depuis un equipement Cisco",
+      summary: "Teste rapidement la joignabilite IP depuis le routeur ou le switch.",
+      commands: ["ping <ip-address>", "ping <hostname>", "ping vrf <vrf-name> <ip-address>", "traceroute <ip-address>", "show ip route <ip-address>"],
+      notes: ["Un ping reussi valide ICMP, pas forcement l'application finale.", "Si DNS est absent ou lent, tester directement l'adresse IP.", "Verifier la route avant de conclure a une panne distante."]
+    },
+    {
+      theme: "connectivity", type: "troubleshoot", level: "intermediaire",
+      title: "Ping depuis un VLAN ou une interface source",
+      summary: "Force l'adresse source du ping pour tester depuis un VLAN de management, utilisateur, voix ou serveur.",
+      commands: ["ping <destination-ip> source vlan <vlan-id>", "ping <destination-ip> source <interface-name>", "ping <destination-ip> source <source-ip>", "traceroute <destination-ip> source vlan <vlan-id>", "show ip interface brief | include Vlan<vlan-id>"],
+      aliases: ["ping vlan", "ping depuis vlan", "ping source vlan", "test vlan", "ping interface source"],
+      notes: ["Tres utile sur un switch L3 ou un routeur avec plusieurs interfaces.", "La SVI du VLAN source doit etre up/up et avoir une adresse IP.", "Si la commande source vlan n'est pas supportee, utiliser l'IP source ou le mode ping etendu."]
+    },
+    {
+      theme: "connectivity", type: "troubleshoot", level: "intermediaire",
+      title: "Ping etendu interactif",
+      summary: "Utilise le mode ping etendu pour choisir source, taille, repetitions, timeout et options.",
+      commands: ["ping", "Protocol [ip]: ip", "Target IP address: <destination-ip>", "Repeat count [5]: 10", "Datagram size [100]: 1500", "Extended commands [n]: y", "Source address or interface: <source-ip-or-interface>", "Set DF bit in IP header? [no]: yes"],
+      aliases: ["extended ping", "ping etendu", "ping avec source", "ping taille mtu df"],
+      notes: ["Lancer simplement ping sans destination en mode privilegie pour entrer dans l'assistant interactif.", "Le bit DF aide a tester les problemes de MTU.", "La syntaxe exacte varie selon IOS, IOS XE et plateforme."]
+    },
+    {
+      theme: "connectivity", type: "troubleshoot", level: "intermediaire",
+      title: "Tester depuis une VRF de management",
+      summary: "Verifie la connectivite quand l'equipement utilise une VRF separee pour l'administration.",
+      commands: ["show vrf", "show ip route vrf <vrf-name>", "ping vrf <vrf-name> <destination-ip>", "traceroute vrf <vrf-name> <destination-ip>", "ssh -l <user> <destination-ip> vrf <vrf-name>"],
+      notes: ["La VRF management est frequente sur IOS XE, Catalyst, ISR et plateformes datacenter.", "Verifier DNS, NTP, syslog et TACACS/RADIUS dans la bonne VRF."]
+    },
+    {
+      theme: "connectivity", type: "troubleshoot", level: "avance",
+      title: "Diagnostiquer un ping qui echoue",
+      summary: "Checklist de verification quand la destination ne repond pas.",
+      commands: ["show ip route <destination-ip>", "show ip cef <destination-ip>", "show access-lists", "show ip interface <source-interface>", "show arp <next-hop-ip>", "traceroute <destination-ip> source <source-interface>", "show logging | include ICMP|ACL|DROP|DENY"],
+      notes: ["Verifier route aller, route retour, ACL, VRF, NAT, firewall et etat de l'interface source.", "Un equipement peut bloquer ICMP tout en laissant passer les flux applicatifs.", "Comparer un ping depuis la passerelle du VLAN et depuis un autre VLAN aide a isoler l'ACL ou le routage."]
+    },
+    {
       theme: "monitoring", type: "verify", level: "intermediaire",
       title: "SPAN local",
       summary: "Miroir de trafic vers un port d'analyse.",
@@ -667,6 +753,34 @@ const CISCO_DATA = {
         { key: "max", label: "Max mW optionnel", value: "30000" }
       ],
       template: ["interface {{interface}}", "power inline {{mode}}", "! Option si supporte par le modele:", "power inline static max {{max}}"]
+    },
+    {
+      commandTitle: "Identifier un poste depuis son IP",
+      title: "IP vers port",
+      fields: [
+        { key: "ip", label: "Adresse IP", value: "192.168.10.25" },
+        { key: "mac", label: "MAC trouvee", value: "0011.2233.4455" }
+      ],
+      template: ["show ip arp {{ip}}", "show mac address-table address {{mac}}", "show interfaces <interface-name> status", "show cdp neighbors interface <interface-name> detail"]
+    },
+    {
+      commandTitle: "Trouver les adresses MAC connectees a un port",
+      title: "Port vers MAC/IP",
+      fields: [
+        { key: "interface", label: "Interface", value: "gigabitEthernet1/0/10" },
+        { key: "mac", label: "MAC optionnelle", value: "0011.2233.4455" }
+      ],
+      template: ["show mac address-table interface {{interface}}", "show cdp neighbors interface {{interface}} detail", "show lldp neighbors interface {{interface}} detail", "show ip arp | include {{mac}}"]
+    },
+    {
+      commandTitle: "Ping depuis un VLAN ou une interface source",
+      title: "Ping source VLAN/interface",
+      fields: [
+        { key: "destination", label: "Destination", value: "8.8.8.8" },
+        { key: "vlan", label: "VLAN source", value: "99" },
+        { key: "interface", label: "Interface source", value: "vlan99" }
+      ],
+      template: ["ping {{destination}} source vlan {{vlan}}", "ping {{destination}} source {{interface}}", "traceroute {{destination}} source {{interface}}", "show ip route {{destination}}"]
     }
   ],
   scenarios: [
@@ -741,6 +855,26 @@ const CISCO_DATA = {
         "Tester power inline never puis power inline auto seulement si une coupure de l'equipement est acceptable.",
         "Si necessaire, utiliser le diagnostic TDR cable en fenetre adaptee."
       ]
+    },
+    {
+      title: "Identifier ce qui est branche sur un port",
+      steps: [
+        "Verifier le port: show interfaces <interface-name> status et show interfaces <interface-name> description.",
+        "Lire les voisins: show cdp neighbors interface <interface-name> detail et show lldp neighbors interface <interface-name> detail.",
+        "Lister les MAC apprises: show mac address-table interface <interface-name>.",
+        "Associer MAC et IP depuis la passerelle du VLAN: show ip arp | include <mac-address>.",
+        "Si la MAC part vers un uplink, suivre CDP/LLDP vers le switch suivant et repeter la recherche."
+      ]
+    },
+    {
+      title: "Tester un ping depuis un VLAN precis",
+      steps: [
+        "Verifier que la SVI source est up/up: show ip interface brief | include Vlan<vlan-id>.",
+        "Verifier la route vers la destination: show ip route <destination-ip>.",
+        "Tester ping <destination-ip> source vlan <vlan-id> ou ping <destination-ip> source <source-ip>.",
+        "Si besoin, utiliser ping etendu pour regler source, taille, repetitions et bit DF.",
+        "Comparer avec traceroute source et verifier ACL, VRF, NAT ou firewall si le ping echoue."
+      ]
     }
   ],
   emergency: [
@@ -759,16 +893,28 @@ const CISCO_DATA = {
     {
       title: "Incident PoE",
       steps: ["show power inline", "show power inline <interface-name>", "show logging | include ILPOWER|POWER|PoE", "show environment power", "interface <interface-name> puis power inline never / power inline auto si redemarrage accepte"]
+    },
+    {
+      title: "Identifier rapidement un equipement sur un port",
+      steps: ["show interfaces <interface-name> status", "show cdp neighbors interface <interface-name> detail", "show lldp neighbors interface <interface-name> detail", "show mac address-table interface <interface-name>", "show ip arp | include <mac-address>"]
+    },
+    {
+      title: "Ping depuis le bon VLAN",
+      steps: ["show ip interface brief | include Vlan<vlan-id>", "show ip route <destination-ip>", "ping <destination-ip> source vlan <vlan-id>", "traceroute <destination-ip> source vlan <vlan-id>", "verifier ACL/VRF/route retour si echec"]
     }
   ],
   glossary: [
     ["ACL", "Access Control List: liste de filtrage du trafic ou de l'acces administration."],
     ["BPDU", "Bridge Protocol Data Unit: trame utilisee par Spanning Tree."],
     ["CEF", "Cisco Express Forwarding: mecanisme de transfert optimise."],
+    ["CDP", "Cisco Discovery Protocol: protocole Cisco de decouverte des voisins directement connectes."],
     ["DTP", "Dynamic Trunking Protocol: negociation Cisco du mode trunk."],
     ["HSRP", "Hot Standby Router Protocol: redondance de passerelle Cisco."],
+    ["ICMP", "Protocole utilise notamment par ping et certains messages de diagnostic IP."],
     ["IOS / IOS XE", "Systemes d'exploitation Cisco pour routeurs, switchs et controleurs."],
     ["LACP", "Link Aggregation Control Protocol: protocole standard pour EtherChannel."],
+    ["LLDP", "Link Layer Discovery Protocol: protocole standard de decouverte des voisins reseau."],
+    ["MAC Address Table", "Table de commutation qui associe une adresse MAC a un VLAN et a un port."],
     ["Native VLAN", "VLAN transporte sans tag sur un trunk 802.1Q."],
     ["NVRAM", "Memoire qui conserve la startup-config."],
     ["OSPF", "Open Shortest Path First: protocole de routage dynamique a etat de liens."],
