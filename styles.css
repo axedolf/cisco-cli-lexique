@@ -110,6 +110,7 @@ a {
 
 .icon-button,
 .copy-btn,
+.export-btn,
 .filter-chip,
 .view-tab,
 .theme-link,
@@ -121,7 +122,8 @@ a {
 }
 
 .icon-button,
-.copy-btn {
+.copy-btn,
+.export-btn {
   padding: 0 14px;
 }
 
@@ -293,6 +295,110 @@ a {
   padding: 9px 14px;
 }
 
+.session-panel {
+  border: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.session-panel summary {
+  cursor: pointer;
+  padding: 13px 16px;
+  color: var(--strong);
+  font-weight: 700;
+}
+
+.session-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+  padding: 0 16px 14px;
+}
+
+.session-grid label,
+.tool-fields label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.session-grid input,
+.tool-fields input {
+  min-height: 38px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--text);
+  padding: 0 10px;
+  outline: none;
+}
+
+.session-grid input:focus,
+.tool-fields input:focus {
+  border-color: var(--strong);
+}
+
+.session-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 16px 16px;
+}
+
+.tools-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.tool-panel {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.tool-panel h3 {
+  margin: 0;
+}
+
+.tool-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.calc-output {
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  padding: 14px;
+}
+
+.calc-output p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.calc-output dl {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.calc-output div {
+  display: grid;
+  grid-template-columns: minmax(110px, 0.35fr) minmax(0, 1fr);
+  gap: 10px;
+}
+
+.calc-output dt {
+  color: var(--muted);
+}
+
+.calc-output dd {
+  margin: 0;
+  font-family: "Cascadia Mono", Consolas, monospace;
+}
+
 #levelSelect {
   max-width: 220px;
 }
@@ -399,7 +505,7 @@ pre {
 
 .command-line {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: 10px;
   min-height: 38px;
@@ -409,6 +515,18 @@ pre {
 
 .command-line:last-child {
   border-bottom: 0;
+}
+
+.prompt-badge {
+  align-self: stretch;
+  display: grid;
+  min-width: 118px;
+  place-items: center;
+  border-right: 1px solid rgba(255, 255, 255, 0.07);
+  color: #9fe0ff;
+  font-family: "Cascadia Mono", Consolas, monospace;
+  font-size: 0.76rem;
+  white-space: nowrap;
 }
 
 .command-line code {
@@ -492,7 +610,9 @@ code {
 
 .card-actions {
   display: flex;
+  gap: 8px;
   justify-content: flex-end;
+  flex-wrap: wrap;
 }
 
 .notes {
@@ -519,6 +639,10 @@ code {
   padding-left: 22px;
   color: var(--muted);
   line-height: 1.55;
+}
+
+.scenario .export-btn {
+  margin-top: 14px;
 }
 
 .glossary-item p {
@@ -780,6 +904,18 @@ code {
 
   .agent-form {
     grid-template-columns: 1fr;
+  }
+
+  .command-line {
+    grid-template-columns: 1fr auto;
+  }
+
+  .prompt-badge {
+    grid-column: 1 / -1;
+    justify-content: start;
+    min-width: 0;
+    padding-bottom: 2px;
+    border-right: 0;
   }
 }
 

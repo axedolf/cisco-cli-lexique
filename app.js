@@ -6,6 +6,7 @@ const state = {
   view: "cards",
   favoritesOnly: false,
   agentOpen: localStorage.getItem("cisco-cli-agent-open") === "true",
+  sessionParams: JSON.parse(localStorage.getItem("cisco-cli-session-params") || "{}"),
   favorites: new Set(JSON.parse(localStorage.getItem("cisco-cli-favorites") || "[]"))
 };
 
@@ -110,6 +111,59 @@ function commandId(item) {
   return `${item.theme}:${item.title}`;
 }
 
+function applySessionParams(value) {
+  const p = state.sessionParams;
+  const replacements = {
+    "vlan-id": p.vlanId,
+    "interface-name": p.interfaceName,
+    "uplink-interface": p.interfaceName,
+    "source-interface": p.interfaceName,
+    "ip-address": p.ipAddress,
+    "destination-ip": p.destinationIp,
+    "source-ip": p.sourceIp,
+    "vrf-name": p.vrfName,
+    "process-id": p.processId,
+    "area-id": p.areaId,
+    wildcard: p.wildcard,
+    mask: p.mask
+  };
+
+  let output = value;
+  Object.entries(replacements).forEach(([key, replacement]) => {
+    if (!replacement) return;
+    output = output.replace(new RegExp(`<${key}>|\\[${key}\\]`, "gi"), replacement);
+  });
+  return output;
+}
+
+function commandsForExport(commands) {
+  return commands.map(applySessionParams).join("\n");
+}
+
+function commandMode(command) {
+  const line = command.trim().toLowerCase();
+  if (/^(show|ping|traceroute|telnet|ssh|copy|write|clear|debug|undebug|terminal|test|monitor capture|dir|reload|more)\b/.test(line)) return "Switch#";
+  if (/^(configure terminal|conf t|enable|disable|end)\b/.test(line)) return "Switch#";
+  if (/^(interface|router|ip access-list|line|vlan|ip dhcp pool|route-map|policy-map|class-map|ipv6 router)\b/.test(line)) return "Switch(config)#";
+  if (/^(exit|description|ip address|no shutdown|shutdown|switchport|spanning-tree|power inline|ip ospf|ipv6 ospf|encapsulation|channel-group|standby|ip helper-address|service-policy)\b/.test(line)) return "Switch(config-if)#";
+  return "Switch(config)#";
+}
+
+function downloadTextFile(filename, content) {
+  const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  URL.revokeObjectURL(link.href);
+  link.remove();
+}
+
+function slugify(value) {
+  return normalize(value).replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "") || "script";
+}
+
 function renderNav() {
   const nav = $("#themeNav");
   const total = CISCO_DATA.commands.length;
@@ -143,6 +197,7 @@ function renderCards() {
     const theme = themeMap[item.theme];
     const id = commandId(item);
     const favorite = state.favorites.has(id);
+    const exportText = commandsForExport(item.commands);
     return `
       <article class="command-card" style="--accent:${theme.accent}">
         <div class="card-head">
@@ -160,7 +215,8 @@ function renderCards() {
         ${renderCommandBlock(item.commands)}
         ${renderSnippet(item)}
         <div class="card-actions">
-          <button class="copy-btn" data-copy="${escapeAttr(item.commands.join("\n"))}">Copier</button>
+          <button class="copy-btn" data-copy="${escapeAttr(exportText)}">Copier</button>
+          <button class="export-btn" data-filename="${escapeAttr(slugify(item.title))}.txt" data-export="${escapeAttr(exportText)}">Exporter .txt</button>
         </div>
         <ul class="notes">
           ${item.notes.map((note) => `<li>${note}</li>`).join("")}
@@ -175,12 +231,15 @@ function renderCards() {
 function renderCommandBlock(commands) {
   return `
     <div class="command-block">
-      ${commands.map((command) => `
+      ${commands.map((command) => {
+        const prepared = applySessionParams(command);
+        return `
         <div class="command-line">
-          <code>${highlightVariables(command)}</code>
-          <button class="line-copy" data-copy="${escapeAttr(command)}" title="Copier cette ligne">Copier</button>
+          <span class="prompt-badge">${escapeHtml(commandMode(prepared))}</span>
+          <code>${highlightVariables(prepared)}</code>
+          <button class="line-copy" data-copy="${escapeAttr(prepared)}" title="Copier cette ligne">Copier</button>
         </div>
-      `).join("")}
+      `;}).join("")}
     </div>
   `;
 }
@@ -209,7 +268,7 @@ function renderSnippet(item) {
 
 function buildSnippet(snippet, values) {
   return snippet.template
-    .map((line) => line.replace(/\{\{(\w+)\}\}/g, (_, key) => values[key] || ""))
+    .map((line) => applySessionParams(line.replace(/\{\{(\w+)\}\}/g, (_, key) => values[key] || "")))
     .join("\n");
 }
 
@@ -292,8 +351,8 @@ function renderAgentMessage(role, content) {
             <span>${escapeHtml(themeMap[item.theme].name)} · ${labelType(item.type)}</span>
           </div>
           <p>${escapeHtml(item.summary)}</p>
-          <pre><code>${escapeHtml(item.commands.join("\n"))}</code></pre>
-          <button class="copy-btn" data-copy="${escapeAttr(item.commands.join("\n"))}">Copier</button>
+          <pre><code>${escapeHtml(commandsForExport(item.commands))}</code></pre>
+          <button class="copy-btn" data-copy="${escapeAttr(commandsForExport(item.commands))}">Copier</button>
         </section>
       `).join("")}
       <p class="agent-warning">Controle la compatibilite IOS/IOS XE et teste les changements sensibles hors production.</p>
@@ -339,6 +398,12 @@ function bindCardActions() {
     });
   });
 
+  $$(".export-btn").forEach((button) => {
+    button.addEventListener("click", () => {
+      downloadTextFile(button.dataset.filename, button.dataset.export);
+    });
+  });
+
   $$(".snippet").forEach((details) => {
     details.querySelectorAll("[data-snippet-field]").forEach((input) => {
       input.addEventListener("input", () => updateSnippet(details));
@@ -381,10 +446,12 @@ function renderScenarios() {
     <article class="scenario">
       <h3>${scenario.title}</h3>
       <ol>
-        ${scenario.steps.map((step) => `<li>${step}</li>`).join("")}
+        ${scenario.steps.map((step) => `<li>${highlightVariables(applySessionParams(step))}</li>`).join("")}
       </ol>
+      <button class="export-btn" data-filename="${escapeAttr(slugify(scenario.title))}.txt" data-export="${escapeAttr(scenario.steps.map(applySessionParams).join("\n"))}">Exporter .txt</button>
     </article>
   `).join("");
+  bindCardActions();
 }
 
 function renderEmergency() {
@@ -392,10 +459,71 @@ function renderEmergency() {
     <article class="scenario emergency-card">
       <h3>${scenario.title}</h3>
       <ol>
-        ${scenario.steps.map((step) => `<li>${highlightVariables(step)}</li>`).join("")}
+        ${scenario.steps.map((step) => `<li>${highlightVariables(applySessionParams(step))}</li>`).join("")}
       </ol>
     </article>
   `).join("");
+}
+
+function renderSessionParams() {
+  $$("[data-session-param]").forEach((input) => {
+    input.value = state.sessionParams[input.dataset.sessionParam] || "";
+  });
+}
+
+function ipToNumber(ip) {
+  const parts = ip.trim().split(".").map(Number);
+  if (parts.length !== 4 || parts.some((part) => Number.isNaN(part) || part < 0 || part > 255)) return null;
+  return parts.reduce((acc, part) => ((acc << 8) | part) >>> 0, 0);
+}
+
+function numberToIp(number) {
+  return [24, 16, 8, 0].map((shift) => (number >>> shift) & 255).join(".");
+}
+
+function maskToNumber(maskValue) {
+  const clean = maskValue.trim();
+  if (/^\d{1,2}$/.test(clean)) {
+    const cidr = Number(clean);
+    if (cidr < 0 || cidr > 32) return null;
+    return cidr === 0 ? 0 : (0xffffffff << (32 - cidr)) >>> 0;
+  }
+  return ipToNumber(clean);
+}
+
+function maskToCidr(maskNumber) {
+  const binary = maskNumber.toString(2).padStart(32, "0");
+  if (!/^1*0*$/.test(binary)) return null;
+  return binary.indexOf("0") === -1 ? 32 : binary.indexOf("0");
+}
+
+function renderIpCalculator() {
+  const output = $("#calcOutput");
+  const ip = ipToNumber($("#calcIp").value);
+  const mask = maskToNumber($("#calcMask").value);
+  if (ip === null || mask === null) {
+    output.innerHTML = `<p>Renseigne une IP et un CIDR/masque valide.</p>`;
+    return;
+  }
+  const cidr = maskToCidr(mask);
+  if (cidr === null) {
+    output.innerHTML = `<p>Masque non contigu: verifie la valeur.</p>`;
+    return;
+  }
+  const wildcard = (~mask) >>> 0;
+  const network = ip & mask;
+  const broadcast = network | wildcard;
+  const first = cidr >= 31 ? network : network + 1;
+  const last = cidr >= 31 ? broadcast : broadcast - 1;
+  output.innerHTML = `
+    <dl>
+      <div><dt>Reseau</dt><dd>${numberToIp(network)}/${cidr}</dd></div>
+      <div><dt>Masque</dt><dd>${numberToIp(mask)}</dd></div>
+      <div><dt>Wildcard</dt><dd>${numberToIp(wildcard)}</dd></div>
+      <div><dt>Broadcast</dt><dd>${numberToIp(broadcast)}</dd></div>
+      <div><dt>Plage utile</dt><dd>${numberToIp(first)} - ${numberToIp(last)}</dd></div>
+    </dl>
+  `;
 }
 
 function renderGlossary() {
@@ -486,6 +614,28 @@ function init() {
     tab.addEventListener("click", () => setView(tab.dataset.view));
   });
 
+  $$("[data-session-param]").forEach((input) => {
+    input.addEventListener("input", () => {
+      state.sessionParams[input.dataset.sessionParam] = input.value.trim();
+      localStorage.setItem("cisco-cli-session-params", JSON.stringify(state.sessionParams));
+      renderCards();
+      renderScenarios();
+      renderEmergency();
+    });
+  });
+
+  $("#clearSessionBtn").addEventListener("click", () => {
+    state.sessionParams = {};
+    localStorage.removeItem("cisco-cli-session-params");
+    renderSessionParams();
+    renderCards();
+    renderScenarios();
+    renderEmergency();
+  });
+
+  $("#calcIp").addEventListener("input", renderIpCalculator);
+  $("#calcMask").addEventListener("input", renderIpCalculator);
+
   $("#themeBtn").addEventListener("click", () => {
     document.body.classList.toggle("light");
     localStorage.setItem("cisco-cli-theme", document.body.classList.contains("light") ? "light" : "dark");
@@ -521,6 +671,8 @@ function init() {
   }
 
   render();
+  renderSessionParams();
+  renderIpCalculator();
   renderScenarios();
   renderEmergency();
   renderGlossary();

@@ -10,6 +10,7 @@ const CISCO_DATA = {
     { id: "monitoring", name: "Verification et supervision", accent: "#4d6470" },
     { id: "discovery", name: "Equipements connectes aux ports", accent: "#2563eb" },
     { id: "connectivity", name: "Tests ping et connectivite", accent: "#15803d" },
+    { id: "quick-diagnostics", name: "Diagnostics rapides Show & Pipe", accent: "#0891b2" },
     { id: "hardware", name: "Materiel, energie et PoE", accent: "#0f766e" },
     { id: "maintenance", name: "Sauvegarde, image et maintenance", accent: "#6b5b2a" },
     { id: "troubleshoot", name: "Depannage", accent: "#a03b16" },
@@ -531,6 +532,54 @@ const CISCO_DATA = {
       summary: "Checklist de verification quand la destination ne repond pas.",
       commands: ["show ip route <destination-ip>", "show ip cef <destination-ip>", "show access-lists", "show ip interface <source-interface>", "show arp <next-hop-ip>", "traceroute <destination-ip> source <source-interface>", "show logging | include ICMP|ACL|DROP|DENY"],
       notes: ["Verifier route aller, route retour, ACL, VRF, NAT, firewall et etat de l'interface source.", "Un equipement peut bloquer ICMP tout en laissant passer les flux applicatifs.", "Comparer un ping depuis la passerelle du VLAN et depuis un autre VLAN aide a isoler l'ACL ou le routage."]
+    },
+    {
+      theme: "quick-diagnostics", type: "verify", level: "base",
+      title: "Nettoyer la vue des interfaces",
+      summary: "Affiche rapidement les interfaces utiles sans lignes inutiles ou sans IP.",
+      commands: ["show ip interface brief | exclude unassigned", "show ip interface brief | include up", "show interfaces status | exclude notconnect", "show interfaces description | exclude admin down"],
+      aliases: ["show pipe interface", "include exclude interface", "diagnostic rapide interface"],
+      notes: ["Tres utile sur les switchs avec beaucoup de ports inutilises.", "Adapter include/exclude selon le format exact de sortie IOS ou IOS XE."]
+    },
+    {
+      theme: "quick-diagnostics", type: "verify", level: "base",
+      title: "Isoler une section de configuration",
+      summary: "Extrait rapidement une portion de running-config sans parcourir tout le fichier.",
+      commands: ["show running-config | section router ospf", "show running-config | section interface Vlan<vlan-id>", "show running-config | section line vty", "show running-config | begin router ospf", "show running-config interface <interface-name>"],
+      aliases: ["show section", "show begin", "running config section", "router ospf section"],
+      notes: ["section isole un bloc; begin affiche a partir de la premiere correspondance.", "La casse et les espaces peuvent varier selon plateformes."]
+    },
+    {
+      theme: "quick-diagnostics", type: "troubleshoot", level: "intermediaire",
+      title: "Traquer erreurs CRC, input errors et drops",
+      summary: "Filtre les compteurs physiques suspects sur toutes les interfaces.",
+      commands: ["show interfaces | include (is up|Ethernet|input errors|CRC|drops|overrun)", "show interfaces counters errors", "show controllers ethernet-controller <interface-name> phy", "show logging | include LINK|LINEPROTO|CRC|ERROR"],
+      aliases: ["crc cable", "input error", "erreur cablage", "show include crc"],
+      notes: ["CRC et input errors orientent souvent vers cable, optique, vitesse/duplex ou port defaillant.", "Comparer les compteurs avant/apres quelques minutes si le probleme est intermittent."]
+    },
+    {
+      theme: "quick-diagnostics", type: "verify", level: "intermediaire",
+      title: "Filtrer logs et evenements critiques",
+      summary: "Cherche rapidement les evenements qui comptent dans le buffer de logs.",
+      commands: ["show logging | include ERR|FAIL|DOWN|UP|OSPF|ADJCHG", "show logging | include ILPOWER|POWER|PoE|TEMP|FAN", "show logging | last 50", "terminal monitor"],
+      aliases: ["show logging include", "logs critiques", "filtrer logs"],
+      notes: ["terminal monitor affiche les logs en direct dans une session distante.", "Utiliser des mots-cles larges puis affiner selon le symptome."]
+    },
+    {
+      theme: "quick-diagnostics", type: "verify", level: "intermediaire",
+      title: "Verifier rapidement OSPF avec pipe",
+      summary: "Controle voisinages, configuration OSPF et routes OSPF avec des sorties filtrees.",
+      commands: ["show ip ospf neighbor | include FULL|EXSTART|INIT|DOWN", "show ip ospf interface brief", "show running-config | section router ospf", "show ip route ospf | begin Gateway", "show logging | include OSPF|ADJCHG"],
+      aliases: ["ospf pipe", "diagnostic ospf rapide", "show ospf include"],
+      notes: ["FULL est attendu sur les liens point-a-point; EXSTART/INIT indiquent souvent MTU, area, auth ou timers."]
+    },
+    {
+      theme: "quick-diagnostics", type: "verify", level: "intermediaire",
+      title: "Retrouver rapidement MAC, ARP et port",
+      summary: "Enchaine les filtres utiles pour retrouver un poste ou equipement connecte.",
+      commands: ["show mac address-table dynamic | include <mac-address>|<interface-name>", "show mac address-table interface <interface-name>", "show ip arp | include <ip-address>|<mac-address>", "show cdp neighbors detail | include Device ID|IP address|Interface|Platform"],
+      aliases: ["mac arp pipe", "trouver poste rapidement", "ip mac port"],
+      notes: ["Commencer par IP vers ARP, puis MAC vers port.", "Si la MAC est sur un uplink, continuer sur le switch voisin."]
     },
     {
       theme: "monitoring", type: "verify", level: "intermediaire",

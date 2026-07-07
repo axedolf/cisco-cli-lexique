@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#101416">
   <meta name="description" content="Lexique Cisco CLI avec fiches, procedures, agent local, favoris et generateurs de configuration.">
   <title>Lexique Cisco CLI</title>
-  <link rel="manifest" href="./manifest.webmanifest?v=20260707-5">
-  <link rel="stylesheet" href="./styles.css?v=20260707-5">
+  <link rel="manifest" href="./manifest.webmanifest?v=20260707-6">
+  <link rel="stylesheet" href="./styles.css?v=20260707-6">
 </head>
 <body>
   <header class="topbar">
@@ -59,6 +59,7 @@
       <section class="toolbar">
         <div class="view-tabs" role="tablist" aria-label="Vues">
           <button class="view-tab active" data-view="cards">Fiches</button>
+          <button class="view-tab" data-view="tools">Outils IP</button>
           <button class="view-tab" data-view="emergency">Urgence</button>
           <button class="view-tab" data-view="scenarios">Procedures</button>
           <button class="view-tab" data-view="glossary">Glossaire</button>
@@ -71,8 +72,42 @@
         </select>
       </section>
 
+      <section class="session-panel" aria-label="Parametres de session">
+        <details id="sessionDetails">
+          <summary>Parametres de session</summary>
+          <div class="session-grid">
+            <label><span>VLAN</span><input data-session-param="vlanId" placeholder="10"></label>
+            <label><span>Interface</span><input data-session-param="interfaceName" placeholder="gigabitEthernet1/0/10"></label>
+            <label><span>Adresse IP</span><input data-session-param="ipAddress" placeholder="192.168.10.1"></label>
+            <label><span>Masque</span><input data-session-param="mask" placeholder="255.255.255.0"></label>
+            <label><span>Destination</span><input data-session-param="destinationIp" placeholder="8.8.8.8"></label>
+            <label><span>Source</span><input data-session-param="sourceIp" placeholder="192.168.10.1"></label>
+            <label><span>VRF</span><input data-session-param="vrfName" placeholder="Mgmt-vrf"></label>
+            <label><span>OSPF process</span><input data-session-param="processId" placeholder="10"></label>
+            <label><span>OSPF area</span><input data-session-param="areaId" placeholder="0"></label>
+            <label><span>Wildcard</span><input data-session-param="wildcard" placeholder="0.0.0.255"></label>
+          </div>
+          <div class="session-actions">
+            <button id="clearSessionBtn" type="button" class="copy-btn">Vider</button>
+          </div>
+        </details>
+      </section>
+
       <section id="cardsView" class="view-panel active">
         <div id="cardsGrid" class="cards-grid"></div>
+      </section>
+
+      <section id="toolsView" class="view-panel">
+        <div class="tools-grid">
+          <article class="tool-panel">
+            <h3>Calculateur IP / Wildcard</h3>
+            <div class="tool-fields">
+              <label><span>Adresse IP</span><input id="calcIp" placeholder="192.168.10.25"></label>
+              <label><span>CIDR ou masque</span><input id="calcMask" placeholder="24 ou 255.255.255.0"></label>
+            </div>
+            <div id="calcOutput" class="calc-output"></div>
+          </article>
+        </div>
       </section>
 
       <section id="emergencyView" class="view-panel">
@@ -122,7 +157,7 @@
     <p>Base inspiree et enrichie a partir du projet open source <a href="https://github.com/grplyler/cisco-cheatsheet#inter-vlan-routing" target="_blank" rel="noreferrer">grplyler/cisco-cheatsheet</a>. Les commandes doivent etre validees selon la version IOS/IOS XE, le modele et la politique de production.</p>
   </footer>
 
-  <script src="./data.js?v=20260707-5"></script>
-  <script src="./app.js?v=20260707-5"></script>
+  <script src="./data.js?v=20260707-6"></script>
+  <script src="./app.js?v=20260707-6"></script>
 </body>
 </html>
