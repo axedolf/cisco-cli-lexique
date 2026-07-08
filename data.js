@@ -537,8 +537,8 @@ const CISCO_DATA = {
       theme: "quick-diagnostics", type: "verify", level: "base",
       title: "Nettoyer la vue des interfaces",
       summary: "Affiche rapidement les interfaces utiles sans lignes inutiles ou sans IP.",
-      commands: ["show ip interface brief | exclude unassigned", "show ip interface brief | include up", "show interfaces status | exclude notconnect", "show interfaces description | exclude admin down"],
-      aliases: ["show pipe interface", "include exclude interface", "diagnostic rapide interface"],
+      commands: ["show interfaces status", "show ip interface brief | exclude unassigned", "show ip interface brief | include up", "show interfaces status | exclude notconnect", "show interfaces description | exclude admin down"],
+      aliases: ["show interface statu", "show interface status", "show interfaces status", "show pipe interface", "include exclude interface", "diagnostic rapide interface"],
       notes: ["Tres utile sur les switchs avec beaucoup de ports inutilises.", "Adapter include/exclude selon le format exact de sortie IOS ou IOS XE."]
     },
     {
@@ -580,6 +580,14 @@ const CISCO_DATA = {
       commands: ["show mac address-table dynamic | include <mac-address>|<interface-name>", "show mac address-table interface <interface-name>", "show ip arp | include <ip-address>|<mac-address>", "show cdp neighbors detail | include Device ID|IP address|Interface|Platform"],
       aliases: ["mac arp pipe", "trouver poste rapidement", "ip mac port"],
       notes: ["Commencer par IP vers ARP, puis MAC vers port.", "Si la MAC est sur un uplink, continuer sur le switch voisin."]
+    },
+    {
+      theme: "quick-diagnostics", type: "verify", level: "intermediaire",
+      title: "Voir les equipements detectes par Device Tracking",
+      summary: "Affiche les clients connus par IP Device Tracking / SISF avec IP, MAC, VLAN et interface quand la fonctionnalite est disponible.",
+      commands: ["show ip device tracking all", "show ip device tracking interface <interface-name>", "show device-tracking database", "show device-tracking database interface <interface-name>", "show device-tracking policies", "show device-tracking counters"],
+      aliases: ["device tracking", "ip device tracking", "show ip device tracking all", "sisf", "ip mac vlan interface", "equipement detecte"],
+      notes: ["La syntaxe varie selon IOS XE: anciennes plateformes utilisent show ip device tracking, les plus recentes utilisent souvent show device-tracking database.", "Cette table est tres utile pour retrouver IP/MAC/VLAN/port sans interroger uniquement ARP ou DHCP Snooping."]
     },
     {
       theme: "monitoring", type: "verify", level: "intermediaire",
