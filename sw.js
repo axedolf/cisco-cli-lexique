@@ -1,11 +1,11 @@
-const CACHE_NAME = "cisco-cli-lexique-v10";
+const CACHE_NAME = "cisco-cli-lexique-v11";
 const ASSETS = [
   "./",
   "./index.html",
-  "./styles.css?v=20260708-3",
-  "./data.js?v=20260708-3",
-  "./app.js?v=20260708-3",
-  "./manifest.webmanifest?v=20260708-3",
+  "./styles.css?v=20260708-4",
+  "./data.js?v=20260708-4",
+  "./app.js?v=20260708-4",
+  "./manifest.webmanifest?v=20260708-4",
   "./icon.svg"
 ];
 
@@ -27,6 +27,19 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
+  const acceptsHtml = event.request.headers.get("accept")?.includes("text/html");
+  if (event.request.mode === "navigate" || acceptsHtml) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          const copy = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put("./index.html", copy));
+          return response;
+        })
+        .catch(() => caches.match(event.request).then((cached) => cached || caches.match("./index.html")))
+    );
+    return;
+  }
   event.respondWith(
     caches.match(event.request).then((cached) => {
       if (cached) return cached;
