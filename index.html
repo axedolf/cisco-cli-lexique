@@ -6,8 +6,8 @@
   <meta name="theme-color" content="#101416">
   <meta name="description" content="Lexique Cisco CLI avec fiches, procedures, agent local, favoris et generateurs de configuration.">
   <title>Lexique Cisco CLI</title>
-  <link rel="manifest" href="./manifest.webmanifest?v=20260708-1">
-  <link rel="stylesheet" href="./styles.css?v=20260708-1">
+  <link rel="manifest" href="./manifest.webmanifest?v=20260708-2">
+  <link rel="stylesheet" href="./styles.css?v=20260708-2">
 </head>
 <body>
   <header class="topbar">
@@ -49,11 +49,20 @@
           <h2>Commandes CLI Cisco classees par theme</h2>
           <p>Une base consultable rapidement pour configurer, verifier et administrer des equipements Cisco. Les exemples utilisent des valeurs generiques a adapter au plan d'adressage reel.</p>
         </div>
-        <div class="stats" aria-label="Statistiques du lexique">
-          <div><strong id="commandCount">0</strong><span>fiches</span></div>
-          <div><strong id="themeCount">0</strong><span>themes</span></div>
-          <div><strong id="resultCount">0</strong><span>resultats</span></div>
-        </div>
+        <aside class="cli-preview" aria-label="Apercu visuel des commandes CLI">
+          <div class="cli-preview-head">
+            <div>
+              <span class="eyebrow">Apercu CLI</span>
+              <h3>5 commandes a l'ecran</h3>
+            </div>
+            <div class="mini-stats">
+              <span><strong id="commandCount">0</strong> fiches</span>
+              <span><strong id="themeCount">0</strong> themes</span>
+              <span><strong id="resultCount">0</strong> resultats</span>
+            </div>
+          </div>
+          <div id="cliPreviewList" class="cli-preview-list"></div>
+        </aside>
       </section>
 
       <section class="toolbar">
@@ -157,7 +166,7 @@
     <p>Base inspiree et enrichie a partir du projet open source <a href="https://github.com/grplyler/cisco-cheatsheet#inter-vlan-routing" target="_blank" rel="noreferrer">grplyler/cisco-cheatsheet</a>. Les commandes doivent etre validees selon la version IOS/IOS XE, le modele et la politique de production.</p>
   </footer>
 
-  <script src="./data.js?v=20260708-1"></script>
-  <script src="./app.js?v=20260708-1"></script>
+  <script src="./data.js?v=20260708-2"></script>
+  <script src="./app.js?v=20260708-2"></script>
 </body>
 </html>

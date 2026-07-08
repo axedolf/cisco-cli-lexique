@@ -239,6 +239,7 @@ function renderCards() {
   const items = filteredCommands();
   $("#resultCount").textContent = items.length;
   if (state.activeResultIndex >= items.length) state.activeResultIndex = items.length - 1;
+  renderCliPreview(items);
   $("#cardsGrid").innerHTML = items.map((item) => {
     const theme = themeMap[item.theme];
     const id = commandId(item);
@@ -500,6 +501,25 @@ function renderScenarios() {
     </article>
   `).join("");
   bindCardActions();
+}
+
+function renderCliPreview(items) {
+  const preview = $("#cliPreviewList");
+  if (!preview) return;
+  const visibleItems = items.slice(0, 5);
+  preview.innerHTML = visibleItems.map((item, index) => {
+    const theme = themeMap[item.theme];
+    const lines = item.commands.slice(0, 3).map(applySessionParams);
+    return `
+      <article class="cli-preview-item" style="--accent:${theme.accent}">
+        <div class="cli-preview-title">
+          <span>${index + 1}</span>
+          <strong>${escapeHtml(item.title)}</strong>
+        </div>
+        <pre><code>${escapeHtml(lines.join("\n"))}</code></pre>
+      </article>
+    `;
+  }).join("") || `<p class="cli-preview-empty">Aucune commande a afficher.</p>`;
 }
 
 function renderEmergency() {
