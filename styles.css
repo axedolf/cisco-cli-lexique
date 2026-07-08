@@ -255,94 +255,27 @@ a {
   font-size: 1.04rem;
 }
 
-.cli-preview {
+.stats {
   display: grid;
-  gap: 12px;
-  width: min(420px, 100%);
+  grid-template-columns: repeat(3, minmax(78px, 1fr));
+  gap: 10px;
+  min-width: min(100%, 310px);
+}
+
+.stats div {
+  background: var(--soft);
   border: 1px solid var(--line);
-  background: color-mix(in srgb, #0b0f10 74%, var(--panel));
   padding: 14px;
 }
 
-.cli-preview-head {
-  display: grid;
-  gap: 10px;
+.stats strong {
+  display: block;
+  font-size: 1.65rem;
 }
 
-.cli-preview-head h3 {
-  margin: 0;
-  font-size: 1rem;
-}
-
-.mini-stats {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 6px;
-}
-
-.mini-stats span {
-  display: grid;
-  gap: 2px;
-  border: 1px solid var(--line);
-  background: var(--soft);
+.stats span {
   color: var(--muted);
-  padding: 7px 8px;
-  font-size: 0.74rem;
-}
-
-.mini-stats strong {
-  color: var(--text);
-  font-size: 1rem;
-}
-
-.cli-preview-list {
-  display: grid;
-  gap: 8px;
-}
-
-.cli-preview-item {
-  display: grid;
-  gap: 6px;
-  padding: 9px;
-  border-left: 3px solid var(--accent);
-  background: rgba(255, 255, 255, 0.045);
-}
-
-.cli-preview-title {
-  display: grid;
-  grid-template-columns: 24px minmax(0, 1fr);
-  align-items: center;
-  gap: 8px;
-}
-
-.cli-preview-title span {
-  display: grid;
-  width: 24px;
-  height: 24px;
-  place-items: center;
-  background: var(--accent);
-  color: #071011;
-  font-weight: 800;
-  font-size: 0.78rem;
-}
-
-.cli-preview-title strong {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   font-size: 0.86rem;
-}
-
-.cli-preview-item pre {
-  min-height: 0;
-  max-height: 86px;
-  padding: 8px 10px;
-  font-size: 0.78rem;
-}
-
-.cli-preview-empty {
-  margin: 0;
-  color: var(--muted);
 }
 
 .toolbar {
@@ -480,8 +413,14 @@ a {
 
 .cards-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
   gap: 16px;
+}
+
+@media (min-width: 1900px) {
+  .cards-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
 }
 
 .command-card,
@@ -957,7 +896,7 @@ code {
     max-height: none;
   }
 
-  .mini-stats {
+  .stats {
     grid-template-columns: repeat(3, 1fr);
   }
 
@@ -989,7 +928,7 @@ code {
     grid-template-columns: 1fr;
   }
 
-  .mini-stats {
+  .stats {
     grid-template-columns: 1fr;
   }
 
