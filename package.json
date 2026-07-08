@@ -1,0 +1,40 @@
+{
+  "name": "cisco-cli-lexique",
+  "version": "1.0.0",
+  "description": "Lexique Cisco CLI installable en PWA et empaquetable en application desktop.",
+  "private": true,
+  "main": "electron/main.cjs",
+  "scripts": {
+    "desktop": "electron .",
+    "build:mac": "electron-builder --mac --publish=never",
+    "build:android:twa": "bubblewrap build"
+  },
+  "build": {
+    "appId": "fr.hugo.ciscoclilexique",
+    "productName": "Lexique Cisco CLI",
+    "files": [
+      "index.html",
+      "styles.css",
+      "app.js",
+      "data.js",
+      "manifest.webmanifest",
+      "sw.js",
+      "icon.svg",
+      "icons/**/*",
+      "electron/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.utilities",
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "icon": "icons/icon-512.png"
+    }
+  },
+  "devDependencies": {
+    "@bubblewrap/cli": "^1.22.0",
+    "electron": "^31.7.7",
+    "electron-builder": "^24.13.3"
+  }
+}

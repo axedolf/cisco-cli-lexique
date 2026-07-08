@@ -18,6 +18,15 @@ Publier tout le dossier `cisco-cli-lexique` sur un hebergeur statique:
 
 Aucun backend ni installation de dependances n'est necessaire.
 
+## Installation Android et macOS
+
+La version GitHub Pages est installable comme PWA depuis Chrome, Edge ou Safari compatible:
+
+- Android: ouvrir le site puis `Installer l'application` ou `Ajouter a l'ecran d'accueil`.
+- macOS: ouvrir le site dans Chrome/Edge puis installer depuis la barre d'adresse.
+
+Pour generer un APK Android ou une application macOS Electron, voir `PACKAGING.md`.
+
 ## Agent IA integre
 
 Le bouton `Agent IA` ouvre un assistant local qui interroge le lexique embarque

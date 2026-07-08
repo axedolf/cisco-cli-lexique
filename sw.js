@@ -1,12 +1,14 @@
-const CACHE_NAME = "cisco-cli-lexique-v11";
+const CACHE_NAME = "cisco-cli-lexique-v12";
 const ASSETS = [
   "./",
   "./index.html",
-  "./styles.css?v=20260708-4",
-  "./data.js?v=20260708-4",
-  "./app.js?v=20260708-4",
-  "./manifest.webmanifest?v=20260708-4",
-  "./icon.svg"
+  "./styles.css?v=20260708-5",
+  "./data.js?v=20260708-5",
+  "./app.js?v=20260708-5",
+  "./manifest.webmanifest?v=20260708-5",
+  "./icon.svg",
+  "./icons/icon-192.png",
+  "./icons/icon-512.png"
 ];
 
 self.addEventListener("install", (event) => {
