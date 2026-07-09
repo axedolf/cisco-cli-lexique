@@ -519,6 +519,69 @@ const CISCO_DATA = {
     },
     {
       theme: "security", type: "security", level: "avance",
+      title: "IP Source Guard sur ports d'acces",
+      summary: "Valide l'adresse IP source d'un poste a partir des bindings DHCP Snooping ou statiques.",
+      commands: ["ip dhcp snooping", "ip dhcp snooping vlan 10", "interface gi1/0/12", "switchport mode access", "switchport access vlan 10", "ip verify source", "show ip verify source", "show ip dhcp snooping binding interface gi1/0/12"],
+      platforms: ["IOS", "IOS XE", "Catalyst"],
+      aliases: ["ip source guard", "ip verify source", "anti spoofing", "source validation"],
+      notes: ["Depend de DHCP Snooping pour les clients DHCP; prevoir des bindings statiques pour les hotes en IP fixe.", "A tester par lot de ports limite pour eviter de bloquer des postes legitimes."]
+    },
+    {
+      theme: "security", type: "security", level: "intermediaire",
+      title: "BPDU Guard et Root Guard",
+      summary: "Protege Spanning Tree contre les switchs non autorises et les changements de racine.",
+      commands: ["spanning-tree portfast default", "spanning-tree bpduguard default", "interface gi1/0/24", "spanning-tree guard root", "show spanning-tree inconsistentports", "show interfaces status err-disabled"],
+      platforms: ["IOS", "IOS XE", "Catalyst"],
+      aliases: ["bpduguard", "root guard", "stp guard", "inconsistent ports"],
+      notes: ["BPDU Guard est adapte aux ports utilisateurs; Root Guard est plutot adapte aux liens ou la racine STP ne doit jamais apparaitre.", "Ne pas activer PortFast/BPDU Guard sur un trunk vers un switch legitime."]
+    },
+    {
+      theme: "security", type: "security", level: "intermediaire",
+      title: "Storm Control broadcast multicast unknown-unicast",
+      summary: "Limite les tempetes L2 qui saturent un VLAN ou un switch d'acces.",
+      commands: ["interface range gi1/0/1 - 24", "storm-control broadcast level 1.00 0.50", "storm-control multicast level 2.00 1.00", "storm-control unicast level 2.00 1.00", "storm-control action trap", "show storm-control", "show interfaces counters errors"],
+      platforms: ["IOS", "IOS XE", "Catalyst"],
+      aliases: ["storm-control", "broadcast storm", "multicast storm", "unknown unicast"],
+      notes: ["Les seuils doivent etre adaptes au profil du port; un seuil trop bas peut couper des usages legitimes.", "Sur certains modeles, l'action shutdown met le port en err-disabled."]
+    },
+    {
+      theme: "security", type: "security", level: "avance",
+      title: "802.1X filaire avec RADIUS",
+      summary: "Active l'authentification reseau par port avec serveur RADIUS.",
+      commands: ["aaa new-model", "radius server ISE-01", "address ipv4 192.168.99.20 auth-port 1812 acct-port 1813", "key CLE_RADIUS", "aaa authentication dot1x default group radius", "aaa authorization network default group radius", "dot1x system-auth-control", "interface gi1/0/12", "authentication port-control auto", "dot1x pae authenticator", "show authentication sessions interface gi1/0/12 details"],
+      platforms: ["IOS", "IOS XE", "Catalyst"],
+      aliases: ["dot1x", "802.1x", "radius", "ise", "authentication sessions"],
+      notes: ["Toujours garder un acces console ou un port de secours avant de generaliser 802.1X.", "Les syntaxes recentes Catalyst utilisent souvent access-session; verifier la version IOS XE."]
+    },
+    {
+      theme: "security", type: "security", level: "avance",
+      title: "MAB avec VLAN critique",
+      summary: "Autorise les equipements sans supplicant 802.1X via leur adresse MAC et prevoit un mode degrade.",
+      commands: ["interface gi1/0/20", "authentication order dot1x mab", "authentication priority dot1x mab", "authentication port-control auto", "mab", "dot1x pae authenticator", "authentication event server dead action authorize vlan 998", "authentication event server alive action reinitialize", "show authentication sessions interface gi1/0/20 details"],
+      platforms: ["IOS", "IOS XE", "Catalyst"],
+      aliases: ["mab", "mac authentication bypass", "vlan critique", "server dead action"],
+      notes: ["MAB est moins fort que 802.1X: une MAC peut etre usurpee.", "Utiliser MAB surtout pour imprimantes, telephones ou objets sans supplicant, avec profilage cote RADIUS."]
+    },
+    {
+      theme: "security", type: "security", level: "avance",
+      title: "Private VLAN isolated community promiscuous",
+      summary: "Isole des hotes dans un meme VLAN IP tout en conservant une passerelle commune.",
+      commands: ["vlan 100", "private-vlan primary", "private-vlan association 101,102", "vlan 101", "private-vlan isolated", "vlan 102", "private-vlan community", "interface gi1/0/1", "switchport mode private-vlan host", "switchport private-vlan host-association 100 101", "interface gi1/0/48", "switchport mode private-vlan promiscuous", "switchport private-vlan mapping 100 101,102", "show vlan private-vlan"],
+      platforms: ["IOS", "IOS XE", "Catalyst"],
+      aliases: ["private vlan", "pvlan", "isolated vlan", "community vlan", "promiscuous"],
+      notes: ["Verifier le support materiel/licence et la compatibilite trunk avant de l'utiliser en production.", "Tres utile en hebergement, DMZ ou reseaux d'equipements qui ne doivent pas communiquer entre eux."]
+    },
+    {
+      theme: "security", type: "verify", level: "avance",
+      title: "Verifier DHCP Snooping DAI Source Guard",
+      summary: "Controle les tables de binding et les protections L2 associees.",
+      commands: ["show ip dhcp snooping", "show ip dhcp snooping binding", "show ip arp inspection", "show ip arp inspection interfaces", "show ip arp inspection statistics", "show ip verify source", "show logging | include DHCP_SNOOPING|SW_DAI|SOURCE_GUARD"],
+      platforms: ["IOS", "IOS XE", "Catalyst"],
+      aliases: ["verify dhcp snooping", "show ip verify source", "show ip arp inspection statistics"],
+      notes: ["Si DAI bloque un hote en IP fixe, ajouter une ARP ACL ou un binding statique adapte.", "Comparer VLAN, MAC, IP et interface avant de conclure a une attaque."]
+    },
+    {
+      theme: "security", type: "security", level: "avance",
       title: "ACL IPv4 standard",
       summary: "Filtre selon l'adresse source.",
       commands: ["ip access-list standard MGMT-SOURCES", "permit 192.168.99.0 0.0.0.255", "deny any log", "line vty 0 15", "access-class MGMT-SOURCES in"],
@@ -530,6 +593,69 @@ const CISCO_DATA = {
       summary: "Filtre source, destination et protocole.",
       commands: ["ip access-list extended USERS-TO-SERVERS", "permit tcp 192.168.10.0 0.0.0.255 192.168.50.10 0.0.0.0 eq 443", "deny ip any any log", "interface vlan 10", "ip access-group USERS-TO-SERVERS in"],
       notes: ["Placer les ACL etendues pres de la source lorsque possible."]
+    },
+    {
+      theme: "security", type: "security", level: "avance",
+      title: "ACL IPv4 etendue nommee avec journalisation",
+      summary: "Filtre finement les flux inter-VLAN et journalise les refus importants.",
+      commands: ["ip access-list extended VLAN10-TO-SERVERS", "remark Autoriser HTTPS vers application", "permit tcp 192.168.10.0 0.0.0.255 host 192.168.50.10 eq 443", "remark Autoriser DNS vers resolvers", "permit udp 192.168.10.0 0.0.0.255 192.168.50.53 0.0.0.0 eq 53", "deny ip 192.168.10.0 0.0.0.255 any log", "interface vlan 10", "ip access-group VLAN10-TO-SERVERS in", "show access-lists VLAN10-TO-SERVERS"],
+      platforms: ["IOS", "IOS XE"],
+      aliases: ["extended acl", "acl nommee", "inter vlan filtering", "deny log"],
+      notes: ["Les lignes ACL sont evaluees de haut en bas avec deny implicite final.", "Limiter le log sur les denies tres frequents pour eviter de surcharger CPU et syslog."]
+    },
+    {
+      theme: "security", type: "security", level: "avance",
+      title: "Zone-Based Policy Firewall ZBF",
+      summary: "Segmente les interfaces en zones et applique une politique stateful entre zones.",
+      commands: ["zone security INSIDE", "zone security OUTSIDE", "class-map type inspect match-any CM-INSIDE-OUT", "match protocol http", "match protocol https", "match protocol dns", "policy-map type inspect PM-INSIDE-OUT", "class type inspect CM-INSIDE-OUT", "inspect", "class class-default", "drop log", "zone-pair security ZP-IN-OUT source INSIDE destination OUTSIDE", "service-policy type inspect PM-INSIDE-OUT", "interface gi0/0", "zone-member security INSIDE", "interface gi0/1", "zone-member security OUTSIDE", "show policy-map type inspect zone-pair"],
+      platforms: ["IOS", "IOS XE", "ISR", "ASR"],
+      aliases: ["zbf", "zone based firewall", "zone-pair", "policy-map type inspect"],
+      notes: ["Une interface dans une zone ne communique pas avec une autre zone sans zone-pair explicite.", "Prevoir les flux de management et de retour avant activation sur un routeur distant."]
+    },
+    {
+      theme: "security", type: "security", level: "avance",
+      title: "CoPP Control Plane Policing",
+      summary: "Protege le plan de controle contre les flux excessifs vers le routeur ou switch L3.",
+      commands: ["ip access-list extended ACL-COPP-MGMT", "permit tcp 192.168.99.0 0.0.0.255 any eq 22", "permit udp 192.168.99.0 0.0.0.255 any eq 161", "class-map match-any CM-COPP-MGMT", "match access-group name ACL-COPP-MGMT", "policy-map PM-COPP", "class CM-COPP-MGMT", "police 1000000 conform-action transmit exceed-action drop", "class class-default", "police 500000 conform-action transmit exceed-action drop", "control-plane", "service-policy input PM-COPP", "show policy-map control-plane"],
+      platforms: ["IOS", "IOS XE", "Catalyst 9000", "ISR", "ASR"],
+      aliases: ["copp", "control-plane policing", "control plane", "show policy-map control-plane"],
+      notes: ["Commencer par mesurer en observation avant de durcir les seuils.", "Une CoPP trop stricte peut casser OSPF, BGP, SSH, SNMP ou ICMP de diagnostic."]
+    },
+    {
+      theme: "security", type: "security", level: "avance",
+      title: "Management Plane Protection MPP",
+      summary: "Restreint les protocoles d'administration aux interfaces explicitement autorisees.",
+      commands: ["control-plane host", "management-interface gigabitEthernet0/0 allow ssh snmp https", "show management-interface", "show running-config | section control-plane host"],
+      platforms: ["IOS", "IOS XE", "ISR", "ASR"],
+      aliases: ["mpp", "management plane protection", "control-plane host", "management-interface"],
+      notes: ["Toutes les plateformes ne supportent pas MPP; les Catalyst utilisent souvent ACL VTY, VRF management et control-plane policies.", "Tester depuis l'interface de management avant de retirer d'autres chemins d'acces."]
+    },
+    {
+      theme: "security", type: "security", level: "avance",
+      title: "Durcissement SSH et HTTPS administration",
+      summary: "Renforce les services d'administration et limite leur exposition.",
+      commands: ["ip ssh version 2", "ip ssh time-out 60", "ip ssh authentication-retries 3", "ip http secure-server", "no ip http server", "ip http authentication aaa", "ip access-list standard MGMT-SOURCES", "permit 192.168.99.0 0.0.0.255", "line vty 0 15", "transport input ssh", "access-class MGMT-SOURCES in", "exec-timeout 10 0", "show ip ssh", "show ip http server secure status"],
+      platforms: ["IOS", "IOS XE", "Catalyst", "ISR", "ASR"],
+      aliases: ["ssh hardening", "https hardening", "no ip http server", "access-class"],
+      notes: ["Desactiver HTTP clair sauf besoin explicite et temporaire.", "Combiner ACL VTY, AAA, VRF management et journalisation des connexions."]
+    },
+    {
+      theme: "security", type: "security", level: "avance",
+      title: "AAA TACACS+ et RADIUS avec fallback local",
+      summary: "Centralise l'authentification/autorisation tout en gardant un secours local controle.",
+      commands: ["aaa new-model", "username secours privilege 15 algorithm-type scrypt secret MOT_DE_PASSE_FORT", "tacacs server TAC1", "address ipv4 192.168.99.30", "key CLE_TACACS", "radius server RAD1", "address ipv4 192.168.99.31 auth-port 1812 acct-port 1813", "key CLE_RADIUS", "aaa group server tacacs+ TAC-GRP", "server name TAC1", "aaa authentication login default group TAC-GRP local", "aaa authorization exec default group TAC-GRP local if-authenticated", "aaa accounting exec default start-stop group TAC-GRP", "show aaa servers"],
+      platforms: ["IOS", "IOS XE", "Catalyst", "ISR", "ASR"],
+      aliases: ["aaa tacacs", "aaa radius", "fallback local", "show aaa servers"],
+      notes: ["Tester avec une session ouverte avant de fermer les acces existants.", "Conserver un compte local de secours robuste, documente et surveille."]
+    },
+    {
+      theme: "security", type: "security", level: "intermediaire",
+      title: "Mots de passe type 8 et type 9",
+      summary: "Utilise des secrets modernes pour les comptes locaux quand la plateforme les supporte.",
+      commands: ["username admin privilege 15 algorithm-type sha256 secret MOT_DE_PASSE_FORT", "username admin2 privilege 15 algorithm-type scrypt secret MOT_DE_PASSE_FORT", "enable algorithm-type scrypt secret MOT_DE_PASSE_ENABLE", "show running-config | include username|enable secret"],
+      platforms: ["IOS XE", "Catalyst 9000", "ISR", "ASR"],
+      aliases: ["type 8", "type 9", "sha256 secret", "scrypt secret", "password encryption"],
+      notes: ["Type 8 correspond a PBKDF2/SHA-256; type 9 correspond a scrypt selon support IOS XE.", "Eviter les anciens mots de passe reversibles type 7 pour les secrets d'administration."]
     },
     {
       theme: "monitoring", type: "verify", level: "base",
@@ -972,6 +1098,27 @@ const CISCO_DATA = {
       template: ["ip domain-name {{domain}}", "username {{user}} privilege 15 secret {{secret}}", "crypto key generate rsa modulus 2048", "ip ssh version 2", "line vty 0 15", "transport input ssh", "login local"]
     },
     {
+      commandTitle: "802.1X filaire avec RADIUS",
+      title: "802.1X port utilisateur",
+      fields: [
+        { key: "radius", label: "Serveur RADIUS", value: "192.168.99.20" },
+        { key: "secret", label: "Cle partagee", value: "CLE_RADIUS" },
+        { key: "interface", label: "Interface", value: "gigabitEthernet1/0/12" }
+      ],
+      template: ["aaa new-model", "radius server ISE-01", "address ipv4 {{radius}} auth-port 1812 acct-port 1813", "key {{secret}}", "aaa authentication dot1x default group radius", "dot1x system-auth-control", "interface {{interface}}", "authentication port-control auto", "dot1x pae authenticator", "show authentication sessions interface {{interface}} details"]
+    },
+    {
+      commandTitle: "Zone-Based Policy Firewall ZBF",
+      title: "ZBF inside vers outside",
+      fields: [
+        { key: "inside", label: "Interface inside", value: "gigabitEthernet0/0" },
+        { key: "outside", label: "Interface outside", value: "gigabitEthernet0/1" },
+        { key: "className", label: "Class-map", value: "CM-INSIDE-OUT" },
+        { key: "policyName", label: "Policy-map", value: "PM-INSIDE-OUT" }
+      ],
+      template: ["zone security INSIDE", "zone security OUTSIDE", "class-map type inspect match-any {{className}}", "match protocol http", "match protocol https", "match protocol dns", "policy-map type inspect {{policyName}}", "class type inspect {{className}}", "inspect", "class class-default", "drop log", "zone-pair security ZP-IN-OUT source INSIDE destination OUTSIDE", "service-policy type inspect {{policyName}}", "interface {{inside}}", "zone-member security INSIDE", "interface {{outside}}", "zone-member security OUTSIDE"]
+    },
+    {
       commandTitle: "Activer ou desactiver PoE sur un port",
       title: "Controle PoE par port",
       fields: [
@@ -1117,6 +1264,18 @@ const CISCO_DATA = {
       ]
     },
     {
+      title: "Deployer la securite L2 sur un switch d'acces",
+      steps: [
+        "Identifier les ports utilisateurs, uplinks, serveurs, bornes Wi-Fi et exceptions avant tout changement.",
+        "Activer PortFast/BPDU Guard sur ports terminaux uniquement.",
+        "Activer DHCP Snooping sur les VLAN utilisateurs et marquer uniquement les uplinks/serveurs DHCP en trust.",
+        "Ajouter Dynamic ARP Inspection et IP Source Guard apres verification des bindings DHCP.",
+        "Appliquer storm-control avec seuils adaptes au profil des ports.",
+        "Deployer port-security, 802.1X ou MAB par groupes pilotes avant generalisation.",
+        "Verifier show ip dhcp snooping binding, show ip arp inspection statistics, show authentication sessions et show logging."
+      ]
+    },
+    {
       title: "Preparer un equipement IOS XE pour automatisation",
       steps: [
         "Verifier routage, DNS et NTP vers le controleur ou l'outil d'automatisation.",
@@ -1207,6 +1366,10 @@ const CISCO_DATA = {
     {
       title: "Incident OSPF",
       steps: ["show ip ospf neighbor detail", "show ip ospf interface brief", "show ip route ospf", "show logging | include OSPF|ADJCHG", "verifier area, timers, MTU, auth, passive-interface", "debug ip ospf adj puis undebug all si necessaire"]
+    },
+    {
+      title: "Incident 802.1X ou MAB",
+      steps: ["show authentication sessions interface <interface-name> details", "show access-session interface <interface-name> details", "show radius statistics", "show logging | include DOT1X|MAB|AUTHMGR|RADIUS", "test aaa group radius <user> <password> legacy", "verifier VLAN critique, serveur RADIUS et fallback local avant shutdown/no shutdown"]
     }
   ],
   glossary: [

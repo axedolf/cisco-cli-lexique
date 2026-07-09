@@ -778,7 +778,7 @@ function init() {
 
 function registerServiceWorker() {
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
-    navigator.serviceWorker.register("./sw.js?v=20260709-1").catch(() => {});
+    navigator.serviceWorker.register("./sw.js?v=20260709-2").catch(() => {});
   }
 }
 

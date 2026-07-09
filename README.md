@@ -46,6 +46,7 @@ API securisee cote serveur afin de ne pas exposer de cle dans le navigateur.
 - Section materiel et PoE: CPU, memoire, temperature, ventilateurs, alimentations, budget PoE, etat PoE par port, activation/desactivation PoE.
 - Sections BGP et QoS avec commandes de configuration, verification et depannage.
 - Badges de compatibilite plateforme sur les fiches enrichies.
+- Version v3: enrichissement securite L2/L3 avec 802.1X, MAB, IP Source Guard, DAI, Private VLAN, ZBF, CoPP, MPP, AAA et durcissement management.
 
 ## Architecture et contribution
 

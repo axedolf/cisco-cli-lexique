@@ -26,7 +26,11 @@ for (const [index, item] of data.commands.entries()) {
 const requiredSearches = [
   ["bgp", "BGP voisin eBGP minimal"],
   ["qos", "QoS MQC simple avec class-map et policy-map"],
-  ["policy-map", "QoS MQC simple avec class-map et policy-map"]
+  ["policy-map", "QoS MQC simple avec class-map et policy-map"],
+  ["dot1x", "802.1X filaire avec RADIUS"],
+  ["ip verify source", "IP Source Guard sur ports d'acces"],
+  ["zbf", "Zone-Based Policy Firewall ZBF"],
+  ["copp", "CoPP Control Plane Policing"]
 ];
 
 function normalize(value) {
