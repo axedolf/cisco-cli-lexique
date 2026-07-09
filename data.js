@@ -13,6 +13,7 @@ const CISCO_DATA = {
     { id: "discovery", name: "Equipements connectes aux ports", accent: "#2563eb" },
     { id: "connectivity", name: "Tests ping et connectivite", accent: "#15803d" },
     { id: "quick-diagnostics", name: "Diagnostics rapides Show & Pipe", accent: "#0891b2" },
+    { id: "cabling", name: "Diagnostic cables et liens physiques", accent: "#b91c1c" },
     { id: "hardware", name: "Materiel, energie et PoE", accent: "#0f766e" },
     { id: "maintenance", name: "Sauvegarde, image et maintenance", accent: "#6b5b2a" },
     { id: "troubleshoot", name: "Depannage", accent: "#a03b16" },
@@ -823,6 +824,42 @@ const CISCO_DATA = {
       notes: ["La syntaxe varie selon IOS XE: anciennes plateformes utilisent show ip device tracking, les plus recentes utilisent souvent show device-tracking database.", "Cette table est tres utile pour retrouver IP/MAC/VLAN/port sans interroger uniquement ARP ou DHCP Snooping."]
     },
     {
+      theme: "cabling", type: "troubleshoot", level: "intermediaire",
+      title: "Executer un test cable TDR cuivre",
+      summary: "Lance un diagnostic TDR sur un port cuivre pour detecter paire ouverte, court-circuit, longueur anormale ou mismatch.",
+      commands: ["show interfaces <interface-name> status", "show interfaces <interface-name>", "show interfaces <interface-name> counters errors", "test cable-diagnostics tdr interface <interface-name>", "show cable-diagnostics tdr interface <interface-name>", "show logging | include TDR|LINK|LINEPROTO|CRC|ERROR"],
+      platforms: ["IOS", "IOS XE", "Catalyst"],
+      aliases: ["tdr", "test cable", "cable defectueux", "paire coupee", "cable diagnostics"],
+      notes: ["Le test TDR est surtout disponible sur ports cuivre Catalyst; il peut provoquer une breve interruption du lien.", "A lancer idealement en fenetre de maintenance ou sur un port non critique.", "Comparer le resultat TDR avec l'etat physique du brassage, le cordon, la prise murale et le patch panel."]
+    },
+    {
+      theme: "cabling", type: "verify", level: "intermediaire",
+      title: "Interpreter les resultats TDR",
+      summary: "Aide a lire les etats des paires et la distance estimee par le test cable.",
+      commands: ["show cable-diagnostics tdr interface <interface-name>", "show interfaces <interface-name> status", "show controllers ethernet-controller <interface-name> phy", "show interfaces <interface-name> | include line protocol|duplex|speed|input errors|CRC"],
+      platforms: ["IOS", "IOS XE", "Catalyst"],
+      aliases: ["open pair", "short pair", "normal pair", "impedance mismatch", "distance tdr"],
+      notes: ["Normal indique une paire coherente; Open oriente vers paire coupee ou cable debranche; Short oriente vers court-circuit; Impedance Mismatch oriente vers mauvais cable, connecteur ou brassage.", "La distance est une estimation: verifier physiquement le chemin de cable avant de conclure.", "Un lien qui negocie en 100 Mb/s au lieu de 1 Gb/s peut indiquer une paire manquante ou defectueuse."]
+    },
+    {
+      theme: "cabling", type: "troubleshoot", level: "base",
+      title: "Diagnostiquer CRC input errors et drops cable",
+      summary: "Identifie les signes d'un cable cuivre, module optique, duplex ou port defectueux.",
+      commands: ["show interfaces <interface-name>", "show interfaces <interface-name> counters errors", "show interfaces | include (is up|input errors|CRC|drops|duplex|rate)", "show logging | include LINK|LINEPROTO|CRC|ERROR|GBIC|SFP", "clear counters <interface-name>", "show interfaces <interface-name> counters errors"],
+      platforms: ["IOS", "IOS XE", "NX-OS", "Catalyst"],
+      aliases: ["crc", "input errors", "drops cable", "duplex mismatch", "erreur physique"],
+      notes: ["clear counters remet les compteurs a zero: noter les valeurs avant si elles servent de preuve.", "CRC qui augmente apres remplacement du cordon indique souvent prise, patch panel, optique, vitesse/duplex ou port.", "Verifier aussi la negociation speed/duplex et les erreurs cote equipement voisin."]
+    },
+    {
+      theme: "cabling", type: "verify", level: "intermediaire",
+      title: "Verifier fibre optique SFP et niveaux lumineux",
+      summary: "Controle module optique, puissance RX/TX, temperature et alarmes DOM.",
+      commands: ["show interfaces transceiver detail", "show inventory | include NAME|PID|SN", "show interfaces <interface-name> status", "show interfaces <interface-name>", "show logging | include SFP|GBIC|TRANSCEIVER|DOM|LINK", "show controllers ethernet-controller <interface-name> phy"],
+      platforms: ["IOS XE", "NX-OS", "Catalyst", "Nexus"],
+      aliases: ["sfp", "transceiver", "fibre", "rx power", "tx power", "dom"],
+      notes: ["Comparer RX/TX aux seuils du constructeur; un RX trop faible pointe vers fibre sale, attenuateur, jarretiere ou distance.", "Nettoyer/connecter la fibre avant de remplacer un module optique.", "Certaines commandes et seuils varient fortement entre Catalyst, Nexus et ISR."]
+    },
+    {
       theme: "monitoring", type: "verify", level: "intermediaire",
       title: "SPAN local",
       summary: "Miroir de trafic vers un port d'analyse.",
@@ -1135,6 +1172,22 @@ const CISCO_DATA = {
       template: ["ip dhcp snooping", "ip dhcp snooping vlan {{vlan}}", "interface {{interface}}", "switchport mode access", "switchport access vlan {{vlan}}", "{{mode}}", "show ip verify source interface {{interface}}", "show ip dhcp snooping binding interface {{interface}}"]
     },
     {
+      commandTitle: "Executer un test cable TDR cuivre",
+      title: "Test cable TDR",
+      fields: [
+        { key: "interface", label: "Interface cuivre", value: "gigabitEthernet1/0/12" }
+      ],
+      template: ["show interfaces {{interface}} status", "show interfaces {{interface}} counters errors", "test cable-diagnostics tdr interface {{interface}}", "show cable-diagnostics tdr interface {{interface}}", "show logging | include TDR|LINK|LINEPROTO|CRC|ERROR"]
+    },
+    {
+      commandTitle: "Diagnostiquer CRC input errors et drops cable",
+      title: "Compteurs erreurs cable",
+      fields: [
+        { key: "interface", label: "Interface", value: "gigabitEthernet1/0/12" }
+      ],
+      template: ["show interfaces {{interface}}", "show interfaces {{interface}} counters errors", "show logging | include LINK|LINEPROTO|CRC|ERROR", "! Option apres avoir note les compteurs:", "clear counters {{interface}}", "show interfaces {{interface}} counters errors"]
+    },
+    {
       commandTitle: "802.1X filaire avec RADIUS",
       title: "802.1X port utilisateur",
       fields: [
@@ -1334,6 +1387,17 @@ const CISCO_DATA = {
       ]
     },
     {
+      title: "Diagnostiquer un cable cuivre defectueux",
+      steps: [
+        "Verifier l'etat du port avec show interfaces <interface-name> status.",
+        "Lire les erreurs avec show interfaces <interface-name> et show interfaces <interface-name> counters errors.",
+        "Lancer test cable-diagnostics tdr interface <interface-name> si le port et la plateforme le supportent.",
+        "Lire show cable-diagnostics tdr interface <interface-name> et noter paire, etat et distance estimee.",
+        "Remplacer cordon, prise, brassage ou patch panel selon le resultat, puis comparer les compteurs apres quelques minutes.",
+        "Verifier aussi le port et les compteurs cote equipement voisin."
+      ]
+    },
+    {
       title: "Identifier ce qui est branche sur un port",
       steps: [
         "Verifier le port: show interfaces <interface-name> status et show interfaces <interface-name> description.",
@@ -1391,6 +1455,10 @@ const CISCO_DATA = {
     {
       title: "Incident PoE",
       steps: ["show power inline", "show power inline <interface-name>", "show logging | include ILPOWER|POWER|PoE", "show environment power", "interface <interface-name> puis power inline never / power inline auto si redemarrage accepte"]
+    },
+    {
+      title: "Incident cable ou lien physique",
+      steps: ["show interfaces <interface-name> status", "show interfaces <interface-name> counters errors", "show interfaces <interface-name> | include input errors|CRC|duplex|speed", "test cable-diagnostics tdr interface <interface-name>", "show cable-diagnostics tdr interface <interface-name>", "show logging | include LINK|LINEPROTO|CRC|ERROR"]
     },
     {
       title: "Identifier rapidement un equipement sur un port",

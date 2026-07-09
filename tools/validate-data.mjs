@@ -29,6 +29,8 @@ const requiredSearches = [
   ["policy-map", "QoS MQC simple avec class-map et policy-map"],
   ["port-security", "Port security sur port d'acces"],
   ["dhcp snooping", "DHCP Snooping"],
+  ["tdr", "Executer un test cable TDR cuivre"],
+  ["crc", "Diagnostiquer CRC input errors et drops cable"],
   ["dot1x", "802.1X filaire avec RADIUS"],
   ["ip verify source", "IP Source Guard sur ports d'acces"],
   ["zbf", "Zone-Based Policy Firewall ZBF"],
