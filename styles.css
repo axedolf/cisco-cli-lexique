@@ -501,6 +501,21 @@ a {
   font-size: 0.82rem;
 }
 
+.platforms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.platforms span {
+  border: 1px solid color-mix(in srgb, var(--accent) 62%, var(--line));
+  background: color-mix(in srgb, var(--accent) 14%, var(--panel));
+  color: var(--text);
+  padding: 4px 7px;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
 pre {
   margin: 0;
   overflow: auto;

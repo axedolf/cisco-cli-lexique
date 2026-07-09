@@ -44,6 +44,14 @@ API securisee cote serveur afin de ne pas exposer de cle dans le navigateur.
 - Vue urgence pour les incidents CPU, port coupe et routage.
 - Mode PWA: cache hors-ligne apres une premiere visite depuis le site publie.
 - Section materiel et PoE: CPU, memoire, temperature, ventilateurs, alimentations, budget PoE, etat PoE par port, activation/desactivation PoE.
+- Sections BGP et QoS avec commandes de configuration, verification et depannage.
+- Badges de compatibilite plateforme sur les fiches enrichies.
+
+## Architecture et contribution
+
+- Architecture technique: `ARCHITECTURE.md`
+- Guide de contribution: `CONTRIBUTING.md`
+- Validation locale des donnees: `node tools/validate-data.mjs`
 
 ## Source et prudence
 

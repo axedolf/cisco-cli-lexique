@@ -7,7 +7,8 @@
   "scripts": {
     "desktop": "electron .",
     "build:mac": "electron-builder --mac --publish=never",
-    "build:android:twa": "bubblewrap build"
+    "build:android:twa": "bubblewrap build",
+    "test": "node tools/validate-data.mjs"
   },
   "build": {
     "appId": "fr.hugo.ciscoclilexique",

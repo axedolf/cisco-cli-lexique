@@ -5,6 +5,8 @@ const CISCO_DATA = {
     { id: "switching", name: "Switching, VLAN et trunks", accent: "#8a5b13" },
     { id: "routing", name: "Routage IPv4/IPv6", accent: "#6750a4" },
     { id: "ospf", name: "Gestion OSPF", accent: "#7c3aed" },
+    { id: "bgp", name: "BGP", accent: "#7e22ce" },
+    { id: "qos", name: "QoS", accent: "#b45309" },
     { id: "services", name: "Services reseau", accent: "#0b6bcb" },
     { id: "security", name: "Securite et durcissement", accent: "#9b1c31" },
     { id: "monitoring", name: "Verification et supervision", accent: "#4d6470" },
@@ -303,11 +305,112 @@ const CISCO_DATA = {
       notes: ["EIGRP est courant dans certains environnements Cisco historiques."]
     },
     {
-      theme: "routing", type: "config", level: "avance",
+      theme: "bgp", type: "config", level: "avance",
       title: "BGP voisin eBGP minimal",
       summary: "Etablit une session BGP externe et annonce un prefixe.",
       commands: ["router bgp 65010", "bgp log-neighbor-changes", "neighbor 203.0.113.1 remote-as 65000", "network 198.51.100.0 mask 255.255.255.0"],
+      platforms: ["IOS", "IOS XE"],
+      aliases: ["bgp ebgp", "neighbor remote-as", "show ip bgp summary"],
       notes: ["Le prefixe annonce doit exister dans la table de routage.", "Filtrage, prefix-list et route-map sont indispensables en production."]
+    },
+    {
+      theme: "bgp", type: "verify", level: "intermediaire",
+      title: "Verifier une session BGP",
+      summary: "Controle l'etat des voisins, les routes recues et la route selectionnee.",
+      commands: ["show ip bgp summary", "show bgp ipv4 unicast summary", "show ip bgp neighbors 203.0.113.1", "show ip bgp", "show ip route bgp", "show tcp brief | include 179"],
+      platforms: ["IOS", "IOS XE", "NX-OS"],
+      aliases: ["bgp summary", "etat voisin bgp", "tcp 179", "routes bgp"],
+      notes: ["Un voisin stable doit rester en Established; les etats Idle, Active ou Connect indiquent souvent reachability, ACL, AS ou TTL.", "Comparer la table BGP et la table de routage: une route BGP non meilleure peut ne pas etre installee."]
+    },
+    {
+      theme: "bgp", type: "config", level: "avance",
+      title: "BGP avec loopback et update-source",
+      summary: "Etablit une session BGP depuis une loopback, typique iBGP ou eBGP multihop controle.",
+      commands: ["interface loopback0", "ip address 10.255.0.1 255.255.255.255", "router bgp 65010", "neighbor 10.255.0.2 remote-as 65010", "neighbor 10.255.0.2 update-source loopback0", "neighbor 10.255.0.2 description RR-01"],
+      platforms: ["IOS", "IOS XE"],
+      aliases: ["ibgp loopback", "update-source", "bgp loopback", "route reflector client"],
+      notes: ["La loopback distante doit etre joignable par IGP ou route statique avant que BGP monte.", "Pour eBGP non directement connecte, ajouter ebgp-multihop avec une valeur adaptee."]
+    },
+    {
+      theme: "bgp", type: "config", level: "avance",
+      title: "Filtrer des annonces BGP avec prefix-list",
+      summary: "Limite les prefixes annonces ou recus par un voisin BGP.",
+      commands: ["ip prefix-list PL-OUT seq 10 permit 198.51.100.0/24", "ip prefix-list PL-OUT seq 99 deny 0.0.0.0/0 le 32", "router bgp 65010", "neighbor 203.0.113.1 prefix-list PL-OUT out", "clear ip bgp 203.0.113.1 soft out", "show ip prefix-list PL-OUT"],
+      platforms: ["IOS", "IOS XE"],
+      aliases: ["bgp prefix-list", "filtrage bgp", "clear ip bgp soft", "route policy"],
+      notes: ["Toujours prevoir une politique explicite en bordure Internet ou inter-AS.", "Utiliser soft clear pour appliquer une politique sans couper brutalement la session."]
+    },
+    {
+      theme: "bgp", type: "config", level: "avance",
+      title: "Politique BGP avec route-map",
+      summary: "Applique local-preference, weight, MED ou communautes selon une prefix-list.",
+      commands: ["ip prefix-list PL-PREFERRED seq 10 permit 203.0.113.0/24", "route-map RM-IN permit 10", "match ip address prefix-list PL-PREFERRED", "set local-preference 200", "route-map RM-IN permit 100", "router bgp 65010", "neighbor 192.0.2.2 route-map RM-IN in", "clear ip bgp 192.0.2.2 soft in"],
+      platforms: ["IOS", "IOS XE"],
+      aliases: ["local preference", "local-pref", "route-map bgp", "med", "weight"],
+      notes: ["local-preference influence la sortie dans l'AS; weight est local au routeur Cisco.", "Conserver une sequence permit finale si les autres routes doivent continuer a passer."]
+    },
+    {
+      theme: "bgp", type: "troubleshoot", level: "avance",
+      title: "Depanner BGP qui ne passe pas Established",
+      summary: "Checklist rapide pour voisins BGP bloques en Idle, Active, Connect ou OpenSent.",
+      commands: ["show ip bgp summary", "show ip bgp neighbors <neighbor-ip> | include BGP state|Last reset|Error", "ping <neighbor-ip> source <source-ip>", "traceroute <neighbor-ip> source <source-ip>", "show access-lists | include 179|<neighbor-ip>", "show logging | include BGP|ADJCHANGE|TCP", "debug ip bgp updates", "undebug all"],
+      platforms: ["IOS", "IOS XE"],
+      aliases: ["bgp active", "bgp idle", "bgp opensent", "depannage bgp"],
+      notes: ["Verifier reachability, AS distant, source attendue, ACL/pare-feu TCP 179, TTL/eBGP multihop et authentification MD5.", "Activer debug seulement en fenetre controlee."]
+    },
+    {
+      theme: "qos", type: "config", level: "intermediaire",
+      title: "QoS MQC simple avec class-map et policy-map",
+      summary: "Classe un trafic puis applique une politique de priorisation ou limitation.",
+      commands: ["class-map match-any CM-VOICE", "match dscp ef", "match ip dscp ef", "policy-map PM-WAN-OUT", "class CM-VOICE", "priority percent 20", "class class-default", "fair-queue", "interface gigabitEthernet0/0", "service-policy output PM-WAN-OUT"],
+      platforms: ["IOS", "IOS XE"],
+      aliases: ["qos mqc", "class-map", "policy-map", "service-policy", "voice qos"],
+      notes: ["La disponibilite de fair-queue, priority percent et des files depend du modele et de la licence.", "Sur lien WAN, appliquer souvent la policy en sortie sur l'interface de congestion."]
+    },
+    {
+      theme: "qos", type: "verify", level: "intermediaire",
+      title: "Verifier une politique QoS appliquee",
+      summary: "Controle les classes, compteurs, drops et files d'une service-policy.",
+      commands: ["show policy-map", "show policy-map interface", "show policy-map interface gigabitEthernet0/0", "show class-map", "show running-config | section policy-map", "show running-config interface gigabitEthernet0/0"],
+      platforms: ["IOS", "IOS XE"],
+      aliases: ["show policy-map interface", "compteurs qos", "drops qos", "service-policy"],
+      notes: ["Les compteurs qui restent a zero peuvent indiquer un mauvais match ou une policy appliquee dans le mauvais sens.", "Comparer le debit reel, les drops et les files avant/apres changement."]
+    },
+    {
+      theme: "qos", type: "config", level: "intermediaire",
+      title: "Marquage DSCP en entree",
+      summary: "Marque le trafic entrant pour faciliter le traitement QoS plus loin dans le reseau.",
+      commands: ["class-map match-any CM-APP-CRITIQUE", "match access-group name ACL-APP-CRITIQUE", "policy-map PM-MARK-IN", "class CM-APP-CRITIQUE", "set dscp af31", "class class-default", "set dscp default", "interface gigabitEthernet1/0/10", "service-policy input PM-MARK-IN"],
+      platforms: ["IOS", "IOS XE"],
+      aliases: ["dscp", "marquage qos", "set dscp", "policy input"],
+      notes: ["Documenter les classes DSCP acceptees par l'organisation.", "Ne pas faire confiance aux marquages utilisateurs sans politique de trust explicite."]
+    },
+    {
+      theme: "qos", type: "config", level: "avance",
+      title: "Policing de trafic avec police",
+      summary: "Limite un flux a un debit defini et applique une action en depassement.",
+      commands: ["policy-map PM-POLICE-IN", "class class-default", "police 10000000 conform-action transmit exceed-action drop", "interface gigabitEthernet0/1", "service-policy input PM-POLICE-IN", "show policy-map interface gigabitEthernet0/1"],
+      platforms: ["IOS", "IOS XE"],
+      aliases: ["policer", "policing", "limitation debit", "exceed-action drop"],
+      notes: ["Le policing coupe le trafic excedentaire; le shaping est souvent preferable en sortie WAN quand il faut lisser.", "Adapter les valeurs en bits par seconde et valider les impacts applicatifs."]
+    },
+    {
+      theme: "qos", type: "config", level: "avance",
+      title: "Shaping WAN parent/enfant",
+      summary: "Lisse le debit d'une interface WAN et applique des classes dans une policy enfant.",
+      commands: ["policy-map PM-CHILD-QOS", "class CM-VOICE", "priority percent 20", "class class-default", "fair-queue", "policy-map PM-PARENT-SHAPE", "class class-default", "shape average 50000000", "service-policy PM-CHILD-QOS", "interface gigabitEthernet0/0", "service-policy output PM-PARENT-SHAPE"],
+      platforms: ["IOS", "IOS XE"],
+      aliases: ["shape average", "hierarchical qos", "hqos", "wan qos"],
+      notes: ["Configurer le shaping legerement sous le debit operateur reel si l'interface physique est plus rapide que le lien vendu.", "Les syntaxes HQoS varient selon plateformes Catalyst, ISR/ASR et versions IOS XE."]
+    },
+    {
+      theme: "qos", type: "troubleshoot", level: "avance",
+      title: "Depanner pertes ou latence avec QoS",
+      summary: "Relie les symptomes applicatifs aux compteurs QoS, files et erreurs interface.",
+      commands: ["show policy-map interface", "show interfaces <interface-name> | include rate|drop|queue|CRC|error", "show platform hardware qfp active statistics drop", "show running-config | section class-map|policy-map", "show logging | include QOS|POLICY|QUEUE"],
+      platforms: ["IOS XE", "Catalyst 9000", "ISR", "ASR"],
+      aliases: ["drops qos", "latence voix", "queue drops", "qfp drops"],
+      notes: ["Sur IOS XE routeur, les compteurs QFP aident a distinguer drops hardware/software.", "Les commandes platform dependent changent selon famille materielle."]
     },
     {
       theme: "routing", type: "config", level: "intermediaire",
@@ -936,6 +1039,29 @@ const CISCO_DATA = {
         { key: "process", label: "Process ID", value: "10" }
       ],
       template: ["ip route 0.0.0.0 0.0.0.0 {{nextHop}}", "router ospf {{process}}", "default-information originate", "show ip route ospf | include 0.0.0.0"]
+    },
+    {
+      commandTitle: "BGP voisin eBGP minimal",
+      title: "eBGP minimal",
+      fields: [
+        { key: "localAs", label: "AS local", value: "65010" },
+        { key: "neighbor", label: "Voisin", value: "203.0.113.1" },
+        { key: "remoteAs", label: "AS distant", value: "65000" },
+        { key: "prefix", label: "Prefixe", value: "198.51.100.0" },
+        { key: "mask", label: "Masque", value: "255.255.255.0" }
+      ],
+      template: ["router bgp {{localAs}}", "bgp log-neighbor-changes", "neighbor {{neighbor}} remote-as {{remoteAs}}", "network {{prefix}} mask {{mask}}", "show ip bgp summary"]
+    },
+    {
+      commandTitle: "QoS MQC simple avec class-map et policy-map",
+      title: "QoS voix WAN",
+      fields: [
+        { key: "className", label: "Class-map", value: "CM-VOICE" },
+        { key: "policyName", label: "Policy-map", value: "PM-WAN-OUT" },
+        { key: "priority", label: "Priority %", value: "20" },
+        { key: "interface", label: "Interface", value: "gigabitEthernet0/0" }
+      ],
+      template: ["class-map match-any {{className}}", "match dscp ef", "policy-map {{policyName}}", "class {{className}}", "priority percent {{priority}}", "class class-default", "fair-queue", "interface {{interface}}", "service-policy output {{policyName}}", "show policy-map interface {{interface}}"]
     }
   ],
   scenarios: [

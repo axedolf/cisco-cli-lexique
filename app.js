@@ -24,7 +24,17 @@ function normalize(value) {
 }
 
 function commandText(item) {
-  return [item.title, item.summary, item.theme, item.type, item.level, item.commands.join(" "), item.notes.join(" "), (item.aliases || []).join(" ")].join(" ");
+  return [
+    item.title,
+    item.summary,
+    item.theme,
+    item.type,
+    item.level,
+    item.commands.join(" "),
+    item.notes.join(" "),
+    (item.aliases || []).join(" "),
+    (item.platforms || []).join(" ")
+  ].join(" ");
 }
 
 function tokenize(value) {
@@ -209,6 +219,15 @@ function renderWarnings(item) {
   `;
 }
 
+function renderPlatforms(item) {
+  if (!item.platforms?.length) return "";
+  return `
+    <div class="platforms" aria-label="Compatibilite plateforme">
+      ${item.platforms.map((platform) => `<span>${escapeHtml(platform)}</span>`).join("")}
+    </div>
+  `;
+}
+
 function renderNav() {
   const nav = $("#themeNav");
   const total = CISCO_DATA.commands.length;
@@ -259,6 +278,7 @@ function renderCards() {
           <span>${labelType(item.type)}</span>
           <span>${labelLevel(item.level)}</span>
         </div>
+        ${renderPlatforms(item)}
         ${renderWarnings(item)}
         ${renderCommandBlock(item.commands)}
         ${renderSnippet(item)}
@@ -758,7 +778,7 @@ function init() {
 
 function registerServiceWorker() {
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
-    navigator.serviceWorker.register("./sw.js?v=20260708-5").catch(() => {});
+    navigator.serviceWorker.register("./sw.js?v=20260709-1").catch(() => {});
   }
 }
 
