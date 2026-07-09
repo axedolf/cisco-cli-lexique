@@ -27,6 +27,8 @@ const requiredSearches = [
   ["bgp", "BGP voisin eBGP minimal"],
   ["qos", "QoS MQC simple avec class-map et policy-map"],
   ["policy-map", "QoS MQC simple avec class-map et policy-map"],
+  ["port-security", "Port security sur port d'acces"],
+  ["dhcp snooping", "DHCP Snooping"],
   ["dot1x", "802.1X filaire avec RADIUS"],
   ["ip verify source", "IP Source Guard sur ports d'acces"],
   ["zbf", "Zone-Based Policy Firewall ZBF"],

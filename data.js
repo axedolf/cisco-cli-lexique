@@ -492,9 +492,11 @@ const CISCO_DATA = {
     {
       theme: "security", type: "security", level: "intermediaire",
       title: "Port security sur port d'acces",
-      summary: "Limite les adresses MAC autorisees sur un port.",
-      commands: ["interface gi1/0/12", "switchport mode access", "switchport port-security", "switchport port-security maximum 2", "switchport port-security mac-address sticky", "switchport port-security violation restrict"],
-      notes: ["Le mode shutdown coupe le port en err-disabled; restrict journalise et bloque les MAC excedentaires."]
+      summary: "Limite les adresses MAC autorisees sur un port utilisateur et controle le comportement en cas de violation.",
+      commands: ["interface gigabitEthernet1/0/12", "description Poste utilisateur - bureau 214", "switchport mode access", "switchport access vlan 10", "switchport nonegotiate", "spanning-tree portfast", "spanning-tree bpduguard enable", "switchport port-security", "switchport port-security maximum 2", "switchport port-security mac-address sticky", "switchport port-security violation restrict", "switchport port-security aging time 15", "switchport port-security aging type inactivity", "show port-security", "show port-security interface gigabitEthernet1/0/12", "show port-security address", "show interfaces status err-disabled"],
+      platforms: ["IOS", "IOS XE", "Catalyst"],
+      aliases: ["port-security", "sticky mac", "violation restrict", "violation shutdown", "violation protect", "securite port"],
+      notes: ["Modes violation: protect bloque silencieusement les MAC excedentaires, restrict bloque et journalise, shutdown met le port en err-disabled.", "Sticky apprend les MAC legitimes et les ecrit dans la running-config; sauvegarder si l'apprentissage doit survivre au reboot.", "Eviter port-security sur uplinks, trunks vers switchs, hyperviseurs ou points d'acces multi-clients sans design specifique."]
     },
     {
       theme: "security", type: "verify", level: "intermediaire",
@@ -507,8 +509,10 @@ const CISCO_DATA = {
       theme: "security", type: "security", level: "avance",
       title: "DHCP Snooping",
       summary: "Bloque les serveurs DHCP non autorises sur ports non fiables.",
-      commands: ["ip dhcp snooping", "ip dhcp snooping vlan 10,20", "interface gi1/0/48", "ip dhcp snooping trust", "interface range gi1/0/1 - 24", "ip dhcp snooping limit rate 20"],
-      notes: ["Les trunks vers serveurs DHCP ou uplinks doivent etre trust."]
+      commands: ["ip dhcp snooping", "ip dhcp snooping vlan 10,20", "no ip dhcp snooping information option", "interface gigabitEthernet1/0/48", "description Uplink vers distribution", "ip dhcp snooping trust", "interface range gigabitEthernet1/0/1 - 24", "description Ports utilisateurs non fiables", "ip dhcp snooping limit rate 20", "show ip dhcp snooping", "show ip dhcp snooping binding", "show ip dhcp snooping statistics", "show logging | include DHCP_SNOOPING|DHCP"],
+      platforms: ["IOS", "IOS XE", "Catalyst"],
+      aliases: ["dhcp snooping", "binding dhcp", "dhcp rogue server", "ip dhcp snooping trust", "option 82"],
+      notes: ["Les uplinks, trunks vers distribution et ports vers serveurs DHCP legitimes doivent etre trust; les ports utilisateurs restent untrusted.", "Option 82 peut poser probleme avec certains relais ou serveurs DHCP: verifier la politique avant de laisser l'insertion active.", "DHCP Snooping est la base de Dynamic ARP Inspection et IP Source Guard."]
     },
     {
       theme: "security", type: "security", level: "avance",
@@ -521,10 +525,10 @@ const CISCO_DATA = {
       theme: "security", type: "security", level: "avance",
       title: "IP Source Guard sur ports d'acces",
       summary: "Valide l'adresse IP source d'un poste a partir des bindings DHCP Snooping ou statiques.",
-      commands: ["ip dhcp snooping", "ip dhcp snooping vlan 10", "interface gi1/0/12", "switchport mode access", "switchport access vlan 10", "ip verify source", "show ip verify source", "show ip dhcp snooping binding interface gi1/0/12"],
+      commands: ["ip dhcp snooping", "ip dhcp snooping vlan 10", "interface gigabitEthernet1/0/12", "description Poste utilisateur - anti-spoofing", "switchport mode access", "switchport access vlan 10", "ip verify source", "ip verify source port-security", "show ip verify source", "show ip verify source interface gigabitEthernet1/0/12", "show ip dhcp snooping binding interface gigabitEthernet1/0/12", "show logging | include SOURCE_GUARD|DHCP_SNOOPING"],
       platforms: ["IOS", "IOS XE", "Catalyst"],
-      aliases: ["ip source guard", "ip verify source", "anti spoofing", "source validation"],
-      notes: ["Depend de DHCP Snooping pour les clients DHCP; prevoir des bindings statiques pour les hotes en IP fixe.", "A tester par lot de ports limite pour eviter de bloquer des postes legitimes."]
+      aliases: ["ip source guard", "ip verify source", "anti spoofing", "source validation", "ip verify source port-security"],
+      notes: ["Depend de DHCP Snooping pour les clients DHCP; prevoir des bindings statiques pour les hotes en IP fixe.", "ip verify source port-security ajoute une validation IP/MAC plus stricte quand Port-security est aussi active.", "A tester par lot de ports limite pour eviter de bloquer des postes legitimes."]
     },
     {
       theme: "security", type: "security", level: "intermediaire",
@@ -1096,6 +1100,39 @@ const CISCO_DATA = {
         { key: "secret", label: "Secret", value: "MOT_DE_PASSE_FORT" }
       ],
       template: ["ip domain-name {{domain}}", "username {{user}} privilege 15 secret {{secret}}", "crypto key generate rsa modulus 2048", "ip ssh version 2", "line vty 0 15", "transport input ssh", "login local"]
+    },
+    {
+      commandTitle: "Port security sur port d'acces",
+      title: "Port-security access",
+      fields: [
+        { key: "interface", label: "Interface", value: "gigabitEthernet1/0/12" },
+        { key: "vlan", label: "VLAN access", value: "10" },
+        { key: "maximum", label: "MAC maximum", value: "2" },
+        { key: "violation", label: "Violation", value: "restrict" },
+        { key: "aging", label: "Aging minutes", value: "15" }
+      ],
+      template: ["interface {{interface}}", "switchport mode access", "switchport access vlan {{vlan}}", "switchport nonegotiate", "spanning-tree portfast", "spanning-tree bpduguard enable", "switchport port-security", "switchport port-security maximum {{maximum}}", "switchport port-security mac-address sticky", "switchport port-security violation {{violation}}", "switchport port-security aging time {{aging}}", "switchport port-security aging type inactivity", "show port-security interface {{interface}}"]
+    },
+    {
+      commandTitle: "DHCP Snooping",
+      title: "DHCP Snooping VLAN",
+      fields: [
+        { key: "vlans", label: "VLAN proteges", value: "10,20" },
+        { key: "uplink", label: "Uplink trusted", value: "gigabitEthernet1/0/48" },
+        { key: "accessRange", label: "Ports utilisateurs", value: "gigabitEthernet1/0/1 - 24" },
+        { key: "rate", label: "Rate limit pps", value: "20" }
+      ],
+      template: ["ip dhcp snooping", "ip dhcp snooping vlan {{vlans}}", "no ip dhcp snooping information option", "interface {{uplink}}", "ip dhcp snooping trust", "interface range {{accessRange}}", "ip dhcp snooping limit rate {{rate}}", "show ip dhcp snooping", "show ip dhcp snooping binding"]
+    },
+    {
+      commandTitle: "IP Source Guard sur ports d'acces",
+      title: "IP Source Guard",
+      fields: [
+        { key: "interface", label: "Interface", value: "gigabitEthernet1/0/12" },
+        { key: "vlan", label: "VLAN", value: "10" },
+        { key: "mode", label: "Mode", value: "ip verify source" }
+      ],
+      template: ["ip dhcp snooping", "ip dhcp snooping vlan {{vlan}}", "interface {{interface}}", "switchport mode access", "switchport access vlan {{vlan}}", "{{mode}}", "show ip verify source interface {{interface}}", "show ip dhcp snooping binding interface {{interface}}"]
     },
     {
       commandTitle: "802.1X filaire avec RADIUS",
