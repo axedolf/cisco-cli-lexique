@@ -1058,8 +1058,9 @@ function init() {
 }
 
 function registerServiceWorker() {
-  if ("serviceWorker" in navigator && location.protocol !== "file:") {
-    navigator.serviceWorker.register("./sw.js?v=20260710-1").catch(() => {});
+  const isNativeApp = window.Capacitor?.isNativePlatform?.() === true;
+  if ("serviceWorker" in navigator && location.protocol !== "file:" && !isNativeApp) {
+    navigator.serviceWorker.register("./sw.js?v=20260710-2").catch(() => {});
   }
 }
 

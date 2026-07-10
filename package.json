@@ -1,6 +1,6 @@
 {
   "name": "cisco-cli-lexique",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Lexique Cisco CLI installable en PWA et empaquetable en application desktop.",
   "private": true,
   "main": "electron/main.cjs",
@@ -8,6 +8,9 @@
     "desktop": "electron .",
     "build:mac": "electron-builder --mac --publish=never",
     "build:android:twa": "bubblewrap build",
+    "mobile:prepare": "node tools/prepare-mobile.mjs",
+    "mobile:sync": "pnpm run mobile:prepare && cap sync android",
+    "mobile:open": "cap open android",
     "test": "node tools/validate-data.mjs"
   },
   "build": {
@@ -34,6 +37,9 @@
     }
   },
   "devDependencies": {
+    "@capacitor/android": "^8.0.0",
+    "@capacitor/cli": "^8.0.0",
+    "@capacitor/core": "^8.0.0",
     "@bubblewrap/cli": "^1.22.0",
     "electron": "^31.7.7",
     "electron-builder": "^24.13.3"

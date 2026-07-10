@@ -21,21 +21,38 @@ https://axedolf.github.io/cisco-cli-lexique/
 
 ## APK Android
 
-Une version APK peut etre generee avec Bubblewrap ou PWABuilder a partir de la PWA publiee.
+Une version Android native Capacitor est incluse dans le dossier `android/`.
+
+APK signe pret a installer:
+
+`downloads/Cisco-CLI-Lexique-Android-v1.1.0.apk`
+
+Lien public direct apres publication GitHub Pages:
+
+https://axedolf.github.io/cisco-cli-lexique/downloads/Cisco-CLI-Lexique-Android-v1.1.0.apk
 
 Pre-requis:
 
 - Java JDK
 - Android SDK
-- Bubblewrap CLI
-- un keystore de signature Android
+- Capacitor 8
+- une cle de signature Android privee
 
 Commande cible:
 
 ```powershell
-pnpm install
-pnpm run build:android:twa
+powershell -ExecutionPolicy Bypass -File tools/build-android.ps1
 ```
+
+La cle et son mot de passe sont conserves dans `.android-private/`, dossier exclu de Git.
+Sauvegarder ce dossier dans un emplacement prive: il est indispensable pour signer les futures mises a jour.
+
+### Installation sur le telephone
+
+1. Telecharger l'APK depuis le lien direct.
+2. Ouvrir le fichier depuis les telechargements Android.
+3. Autoriser temporairement l'installation depuis cette source si Android le demande.
+4. Appuyer sur `Installer`.
 
 Publication possible:
 

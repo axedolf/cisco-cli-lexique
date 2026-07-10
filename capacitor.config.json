@@ -1,0 +1,11 @@
+{
+  "appId": "fr.hugo.ciscoclilexique",
+  "appName": "Cisco CLI Lexique",
+  "webDir": "web",
+  "backgroundColor": "#101416",
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false
+  }
+}
