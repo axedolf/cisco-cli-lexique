@@ -6,9 +6,9 @@
   <meta name="theme-color" content="#101416">
   <meta name="description" content="Lexique Cisco CLI avec fiches, procedures, agent local, favoris et generateurs de configuration.">
   <title>Lexique Cisco CLI</title>
-  <link rel="manifest" href="./manifest.webmanifest?v=20260709-4">
+  <link rel="manifest" href="./manifest.webmanifest?v=20260710-1">
   <link rel="apple-touch-icon" href="./icons/icon-192.png">
-  <link rel="stylesheet" href="./styles.css?v=20260709-4">
+  <link rel="stylesheet" href="./styles.css?v=20260710-1">
 </head>
 <body>
   <header class="topbar">
@@ -61,16 +61,26 @@
         <div class="view-tabs" role="tablist" aria-label="Vues">
           <button class="view-tab active" data-view="cards">Fiches</button>
           <button class="view-tab" data-view="tools">Outils IP</button>
+          <button class="view-tab" data-view="operations">Atelier terrain</button>
           <button class="view-tab" data-view="emergency">Urgence</button>
           <button class="view-tab" data-view="scenarios">Procedures</button>
           <button class="view-tab" data-view="glossary">Glossaire</button>
         </div>
-        <select id="levelSelect" aria-label="Filtrer par niveau">
-          <option value="all">Tous niveaux</option>
-          <option value="base">Base</option>
-          <option value="intermediaire">Intermediaire</option>
-          <option value="avance">Avance</option>
-        </select>
+        <div class="toolbar-selects">
+          <select id="equipmentProfile" aria-label="Profil d'equipement">
+            <option value="all">Toutes plateformes</option>
+            <option value="iosxe">Catalyst 9000 / IOS XE 17.x</option>
+            <option value="ios">Catalyst 2960X / IOS 15.x</option>
+            <option value="nxos">Nexus 9000 / NX-OS</option>
+            <option value="isr">ISR 4000 / IOS XE</option>
+          </select>
+          <select id="levelSelect" aria-label="Filtrer par niveau">
+            <option value="all">Tous niveaux</option>
+            <option value="base">Base</option>
+            <option value="intermediaire">Intermediaire</option>
+            <option value="avance">Avance</option>
+          </select>
+        </div>
       </section>
 
       <section class="session-panel" aria-label="Parametres de session">
@@ -107,6 +117,73 @@
               <label><span>CIDR ou masque</span><input id="calcMask" placeholder="24 ou 255.255.255.0"></label>
             </div>
             <div id="calcOutput" class="calc-output"></div>
+          </article>
+        </div>
+      </section>
+
+      <section id="operationsView" class="view-panel">
+        <div class="operations-grid">
+          <article class="tool-panel operations-wide">
+            <div class="panel-heading">
+              <div><span class="panel-kicker">Analyse locale</span><h3>Analyseur de sortie CLI</h3></div>
+              <button id="redactOutputBtn" class="copy-btn" type="button">Masquer les donnees sensibles</button>
+            </div>
+            <textarea id="cliOutputInput" class="ops-textarea" rows="12" placeholder="Collez ici une sortie show interfaces, show power inline, show processes cpu, show environment ou show logging..."></textarea>
+            <div class="panel-actions">
+              <button id="analyzeOutputBtn" class="primary-action" type="button">Analyser</button>
+              <button id="clearOutputBtn" class="copy-btn" type="button">Vider</button>
+            </div>
+            <div id="cliAnalysisResult" class="analysis-result" aria-live="polite"></div>
+          </article>
+
+          <article class="tool-panel">
+            <span class="panel-kicker">Diagnostic guide</span>
+            <h3>Partir d'un symptome</h3>
+            <select id="diagnosticSelect" class="ops-select" aria-label="Choisir un symptome"></select>
+            <div id="diagnosticResult" class="diagnostic-result"></div>
+          </article>
+
+          <article class="tool-panel">
+            <div class="panel-heading">
+              <div><span class="panel-kicker">Intervention</span><h3>Procedure personnalisee</h3></div>
+              <span id="interventionCount" class="count-badge">0 fiche</span>
+            </div>
+            <div id="interventionList" class="intervention-list"></div>
+            <div class="panel-actions">
+              <button id="exportInterventionBtn" class="primary-action" type="button">Exporter .cfg</button>
+              <button id="clearInterventionBtn" class="copy-btn" type="button">Vider</button>
+            </div>
+          </article>
+
+          <article class="tool-panel operations-wide">
+            <span class="panel-kicker">Controle du changement</span>
+            <h3>Comparer avant et apres</h3>
+            <div class="comparison-inputs">
+              <label><span>Capture avant</span><textarea id="beforeOutput" class="ops-textarea" rows="8" placeholder="Sortie avant intervention"></textarea></label>
+              <label><span>Capture apres</span><textarea id="afterOutput" class="ops-textarea" rows="8" placeholder="Sortie apres intervention"></textarea></label>
+            </div>
+            <div class="panel-actions"><button id="compareOutputsBtn" class="primary-action" type="button">Comparer</button></div>
+            <div id="comparisonResult" class="analysis-result"></div>
+          </article>
+
+          <article class="tool-panel">
+            <span class="panel-kicker">Suivi local</span>
+            <h3>Journal d'incident</h3>
+            <div class="journal-entry-form">
+              <input id="journalInput" type="text" placeholder="Observation, commande ou action...">
+              <button id="addJournalBtn" class="primary-action" type="button">Ajouter</button>
+            </div>
+            <div id="journalList" class="journal-list"></div>
+            <div class="panel-actions">
+              <button id="exportJournalBtn" class="copy-btn" type="button">Exporter .txt</button>
+              <button id="clearJournalBtn" class="copy-btn" type="button">Vider</button>
+            </div>
+          </article>
+
+          <article class="tool-panel">
+            <span class="panel-kicker">Aide express</span>
+            <h3>Matrice symptome vers commandes</h3>
+            <div id="symptomMatrix" class="symptom-matrix"></div>
           </article>
         </div>
       </section>
@@ -158,7 +235,7 @@
     <p>Base inspiree et enrichie a partir du projet open source <a href="https://github.com/grplyler/cisco-cheatsheet#inter-vlan-routing" target="_blank" rel="noreferrer">grplyler/cisco-cheatsheet</a>. Les commandes doivent etre validees selon la version IOS/IOS XE, le modele et la politique de production.</p>
   </footer>
 
-  <script src="./data.js?v=20260709-4"></script>
-  <script src="./app.js?v=20260709-4"></script>
+  <script src="./data.js?v=20260710-1"></script>
+  <script src="./app.js?v=20260710-1"></script>
 </body>
 </html>

@@ -2,12 +2,15 @@ import fs from "node:fs";
 import vm from "node:vm";
 
 const source = fs.readFileSync("data.js", "utf8");
+const appSource = fs.readFileSync("app.js", "utf8");
+const htmlSource = fs.readFileSync("index.html", "utf8");
 const context = {};
 vm.runInNewContext(`${source}; result = CISCO_DATA;`, context);
 
 const data = context.result;
 const themeIds = new Set(data.themes.map((theme) => theme.id));
 const errors = [];
+const commandTitles = new Set();
 
 for (const [index, item] of data.commands.entries()) {
   for (const key of ["theme", "type", "level", "title", "summary", "commands", "notes"]) {
@@ -21,6 +24,18 @@ for (const [index, item] of data.commands.entries()) {
   if (item.platforms && !Array.isArray(item.platforms)) {
     errors.push(`commands[${index}] ${item.title}: platforms doit etre un tableau`);
   }
+  if (commandTitles.has(item.title)) errors.push(`commands[${index}] titre duplique: ${item.title}`);
+  commandTitles.add(item.title);
+}
+
+for (const snippet of data.snippets || []) {
+  if (!commandTitles.has(snippet.commandTitle)) errors.push(`snippet orphelin: ${snippet.commandTitle}`);
+}
+
+const htmlIds = new Set([...htmlSource.matchAll(/\bid="([^"]+)"/g)].map((match) => match[1]));
+const referencedIds = new Set([...appSource.matchAll(/\$\("#([^" ]+)"\)/g)].map((match) => match[1]));
+for (const id of referencedIds) {
+  if (!htmlIds.has(id)) errors.push(`app.js reference un id HTML absent: #${id}`);
 }
 
 const requiredSearches = [
@@ -34,8 +49,17 @@ const requiredSearches = [
   ["dot1x", "802.1X filaire avec RADIUS"],
   ["ip verify source", "IP Source Guard sur ports d'acces"],
   ["zbf", "Zone-Based Policy Firewall ZBF"],
-  ["copp", "CoPP Control Plane Policing"]
+  ["copp", "CoPP Control Plane Policing"],
+  ["hsrp", "Configurer HSRP avec suivi d'uplink"],
+  ["netflow", "Configurer Flexible NetFlow IPv4"],
+  ["vpc", "Configurer un domaine vPC Nexus"],
+  ["vxlan", "Verifier VXLAN EVPN sur Nexus 9000"],
+  ["install add", "Mettre a jour IOS XE en mode install"]
 ];
+
+if (!Array.isArray(data.diagnostics) || data.diagnostics.length < 6) {
+  errors.push("diagnostics: au moins 6 symptomes sont requis");
+}
 
 function normalize(value) {
   return value.toString().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");

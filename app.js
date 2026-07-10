@@ -6,9 +6,12 @@ const state = {
   view: "cards",
   activeResultIndex: -1,
   favoritesOnly: false,
+  equipmentProfile: localStorage.getItem("cisco-cli-equipment-profile") || "all",
   agentOpen: localStorage.getItem("cisco-cli-agent-open") === "true",
   sessionParams: JSON.parse(localStorage.getItem("cisco-cli-session-params") || "{}"),
-  favorites: new Set(JSON.parse(localStorage.getItem("cisco-cli-favorites") || "[]"))
+  favorites: new Set(JSON.parse(localStorage.getItem("cisco-cli-favorites") || "[]")),
+  intervention: JSON.parse(localStorage.getItem("cisco-cli-intervention") || "[]"),
+  journal: JSON.parse(localStorage.getItem("cisco-cli-journal") || "[]")
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -111,13 +114,26 @@ function filteredCommands() {
     const matchesType = hasQuery || state.type === "all" || item.type === state.type;
     const matchesLevel = hasQuery || state.level === "all" || item.level === state.level;
     const matchesFavorites = hasQuery || !state.favoritesOnly || state.favorites.has(id);
+    const matchesPlatform = hasQuery || profileMatches(item);
     const matchesQuery = matchesSearch(item, q);
-    return matchesTheme && matchesType && matchesLevel && matchesFavorites && matchesQuery;
+    return matchesTheme && matchesType && matchesLevel && matchesFavorites && matchesPlatform && matchesQuery;
   });
   if (hasQuery) {
     results.sort((a, b) => searchScore(b, q) - searchScore(a, q));
   }
   return results;
+}
+
+function profileMatches(item) {
+  if (state.equipmentProfile === "all" || !item.platforms?.length) return true;
+  const labels = normalize(item.platforms.join(" "));
+  const profileTerms = {
+    iosxe: ["ios xe", "catalyst 9000", "catalyst 9k"],
+    ios: ["ios", "2960", "catalyst"],
+    nxos: ["nx-os", "nxos", "nexus"],
+    isr: ["ios xe", "isr", "routeur"]
+  }[state.equipmentProfile] || [];
+  return profileTerms.some((term) => labels.includes(term));
 }
 
 function commandId(item) {
@@ -228,6 +244,44 @@ function renderPlatforms(item) {
   `;
 }
 
+function commandRisk(item) {
+  if (item.risk) return item.risk;
+  const text = normalize(item.commands.join(" "));
+  if (/reload|write erase|erase startup|delete flash|format flash|factory-reset|confreg/.test(text)) return "critique";
+  if (/shutdown|clear |debug |default interface|no router|no vlan|power inline never|install add|request platform/.test(text)) return "interruption";
+  if (item.type === "verify" || /^(show|ping|traceroute)/.test(normalize(item.commands[0]))) return "lecture";
+  return "modification";
+}
+
+function renderRisk(item) {
+  const risk = commandRisk(item);
+  const labels = {
+    lecture: "Lecture seule",
+    modification: "Modification",
+    interruption: "Risque de coupure",
+    critique: "Commande critique"
+  };
+  return `<span class="risk-badge risk-${risk}">${labels[risk]}</span>`;
+}
+
+function rollbackCommands(item) {
+  if (item.rollback?.length) return item.rollback;
+  if (item.type === "verify") return [];
+  return ["! Rollback manuel a definir et valider avant intervention pour cette fiche."];
+}
+
+function renderRollback(item) {
+  const rollback = rollbackCommands(item);
+  if (!rollback.length) return "";
+  return `
+    <details class="rollback">
+      <summary>Plan de retour arriere</summary>
+      <pre><code>${escapeHtml(rollback.join("\n"))}</code></pre>
+      ${copyButton("Copier le rollback", rollback.join("\n"))}
+    </details>
+  `;
+}
+
 function renderNav() {
   const nav = $("#themeNav");
   const total = CISCO_DATA.commands.length;
@@ -277,12 +331,15 @@ function renderCards() {
         <div class="meta">
           <span>${labelType(item.type)}</span>
           <span>${labelLevel(item.level)}</span>
+          ${renderRisk(item)}
         </div>
         ${renderPlatforms(item)}
         ${renderWarnings(item)}
         ${renderCommandBlock(item.commands)}
         ${renderSnippet(item)}
+        ${renderRollback(item)}
         <div class="card-actions">
+          <button class="intervention-btn" data-intervention="${escapeAttr(id)}">${state.intervention.includes(id) ? "Retirer" : "Ajouter intervention"}</button>
           ${copyButton("Copier", exportText)}
           ${exportButton("Exporter .txt", `${slugify(item.title)}.txt`, exportText)}
         </div>
@@ -433,7 +490,7 @@ function renderAgentMessage(role, content) {
 }
 
 function askAgent(question) {
-  const cleanQuestion = question.trim();
+  const cleanQuestion = redactSensitiveData(question.trim());
   if (!cleanQuestion) return;
   renderAgentMessage("user", cleanQuestion);
   renderAgentMessage("assistant", buildAgentAnswer(cleanQuestion));
@@ -537,6 +594,18 @@ function renderSessionParams() {
   $$("[data-session-param]").forEach((input) => {
     input.value = state.sessionParams[input.dataset.sessionParam] || "";
   });
+
+  $$(".intervention-btn").forEach((button) => {
+    button.addEventListener("click", () => {
+      const id = button.dataset.intervention;
+      state.intervention = state.intervention.includes(id)
+        ? state.intervention.filter((entry) => entry !== id)
+        : [...state.intervention, id];
+      localStorage.setItem("cisco-cli-intervention", JSON.stringify(state.intervention));
+      renderCards();
+      renderIntervention();
+    });
+  });
 }
 
 function ipToNumber(ip) {
@@ -592,6 +661,162 @@ function renderIpCalculator() {
       <div><dt>Plage utile</dt><dd>${numberToIp(first)} - ${numberToIp(last)}</dd></div>
     </dl>
   `;
+}
+
+function redactSensitiveData(value) {
+  return value
+    .replace(/(^|\s)(enable secret|username\s+\S+\s+(?:secret|password)|snmp-server community|key-string|pre-shared-key)\s+\S+/gim, "$1$2 <MASQUE>")
+    .replace(/\b(?:[0-9A-F]{2}:){5}[0-9A-F]{2}\b/gi, "XX:XX:XX:XX:XX:XX")
+    .replace(/\b(?:[0-9A-F]{4}\.){2}[0-9A-F]{4}\b/gi, "XXXX.XXXX.XXXX")
+    .replace(/\b[A-Z]{3}\d{7,}\b/g, "SERIAL-MASQUE")
+    .replace(/\b(?:\d{1,3}\.){3}\d{1,3}\b/g, (ip) => {
+      const parts = ip.split(".");
+      return `${parts[0]}.${parts[1]}.x.x`;
+    });
+}
+
+function analyzeCliOutput(value) {
+  const text = value.trim();
+  if (!text) return [];
+  const rules = [
+    { severity: "critical", test: /err-?disabled|power denied|faulty|temperature.*critical|critical.*temperature|fan.*failed|power supply.*failed/i, title: "Defaut critique detecte", advice: "Isoler la ligne concernee, consulter les logs et verifier le materiel avant toute remise en service." },
+    { severity: "warning", test: /input errors?|crc|frame|overrun|ignored|output drops?|collisions?/i, title: "Erreurs de lien ou pertes", advice: "Comparer les compteurs, verifier vitesse/duplex, connectique, TDR cuivre ou niveaux optiques." },
+    { severity: "warning", test: /notconnect|line protocol is down|administratively down/i, title: "Interface inactive", advice: "Verifier l'etat administratif, le cablage, le transceiver et l'equipement distant." },
+    { severity: "warning", test: /poe.*(deny|fault)|over.?current|insufficient power|power.*off/i, title: "Anomalie PoE", advice: "Verifier le budget global, la classe du PD, le cable et power inline sur le port." },
+    { severity: "warning", test: /duplex mismatch|late collision/i, title: "Incoherence duplex", advice: "Aligner auto-negociation ou parametrage vitesse/duplex aux deux extremites." },
+    { severity: "info", test: /ospf.*down|adjacency.*changed|bgp.*down|neighbor.*down/i, title: "Instabilite de routage", advice: "Controler connectivite, timers, MTU, authentification et journaux du protocole." }
+  ];
+  const findings = rules.filter((rule) => rule.test.test(text));
+  const cpuValues = [...text.matchAll(/(?:CPU utilization|five seconds|5Sec|CPU)\D{0,30}(\d{1,3})%/gi)].map((match) => Number(match[1]));
+  if (cpuValues.some((value) => value >= 80)) findings.unshift({ severity: "critical", title: "CPU superieur ou egal a 80 %", advice: "Identifier le processus consommateur, arreter les debug et rechercher boucle, tempete ou instabilite de routage." });
+  const temperatures = [...text.matchAll(/(?:temperature|temp)\D{0,20}(\d{2,3})\s*(?:c|celsius)/gi)].map((match) => Number(match[1]));
+  if (temperatures.some((value) => value >= 70)) findings.unshift({ severity: "critical", title: "Temperature elevee", advice: "Verifier ventilation, flux d'air, ventilateurs et seuils propres au modele." });
+  return findings.length ? findings : [{ severity: "ok", title: "Aucune anomalie evidente detectee", advice: "Le controle est heuristique. Comparer avec les seuils du modele et la situation habituelle de l'equipement." }];
+}
+
+function renderCliAnalysis() {
+  const findings = analyzeCliOutput($("#cliOutputInput").value);
+  $("#cliAnalysisResult").innerHTML = findings.length
+    ? findings.map((finding) => `<article class="finding finding-${finding.severity}"><strong>${escapeHtml(finding.title)}</strong><p>${escapeHtml(finding.advice)}</p></article>`).join("")
+    : `<p class="empty-inline">Collez une sortie CLI pour lancer l'analyse.</p>`;
+}
+
+function renderDiagnostics() {
+  const diagnostics = CISCO_DATA.diagnostics || [];
+  const select = $("#diagnosticSelect");
+  if (!select.options.length) {
+    select.innerHTML = diagnostics.map((item, index) => `<option value="${index}">${escapeHtml(item.symptom)}</option>`).join("");
+  }
+  const diagnostic = diagnostics[Number(select.value) || 0];
+  $("#diagnosticResult").innerHTML = diagnostic ? `
+    <ol>${diagnostic.steps.map((step) => `<li><strong>${escapeHtml(step.check)}</strong><code>${escapeHtml(step.command)}</code><span>${escapeHtml(step.next)}</span></li>`).join("")}</ol>
+  ` : `<p class="empty-inline">Aucun diagnostic disponible.</p>`;
+}
+
+function interventionItems() {
+  return state.intervention.map((id) => CISCO_DATA.commands.find((item) => commandId(item) === id)).filter(Boolean);
+}
+
+function interventionExportText() {
+  const items = interventionItems();
+  const verificationCommands = [...new Set(items.flatMap((item) => {
+    const byTheme = {
+      switching: ["show vlan brief", "show interfaces trunk", "show spanning-tree summary"],
+      routing: ["show ip route", "show ip interface brief"],
+      ospf: ["show ip ospf neighbor", "show ip route ospf"],
+      bgp: ["show ip bgp summary", "show ip route bgp"],
+      security: ["show authentication sessions", "show ip dhcp snooping", "show logging | last 50"],
+      "high-availability": ["show standby brief", "show redundancy", "show switch"],
+      observability: ["show flow monitor", "show ip sla statistics", "show track"],
+      datacenter: ["show vpc brief", "show port-channel summary", "show logging logfile | last 50"],
+      software: ["show version", "show install summary", "show boot"]
+    };
+    return byTheme[item.theme] || ["show logging | last 50", "show ip interface brief"];
+  }))];
+  const sections = items.map((item, index) => {
+    const rollback = rollbackCommands(item);
+    return [
+      `! ETAPE ${index + 1} - ${item.title}`,
+      `! Risque: ${commandRisk(item)}`,
+      ...item.commands.map(applySessionParams),
+      ...(rollback.length ? ["", "! RETOUR ARRIERE", ...rollback] : [])
+    ].join("\n");
+  });
+  return [
+    `! Intervention Cisco CLI - ${new Date().toLocaleString("fr-FR")}`,
+    "! Valider le profil, sauvegarder la configuration et maintenir un acces console.",
+    "! VERIFICATIONS AVANT",
+    ...verificationCommands,
+    "",
+    ...sections,
+    "",
+    "! VERIFICATIONS APRES",
+    ...verificationCommands
+  ].join("\n\n");
+}
+
+function renderIntervention() {
+  const items = interventionItems();
+  $("#interventionCount").textContent = `${items.length} fiche${items.length > 1 ? "s" : ""}`;
+  $("#interventionList").innerHTML = items.length ? items.map((item, index) => `
+    <div class="intervention-item">
+      <span>${index + 1}</span><div><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(themeMap[item.theme].name)} · ${commandRisk(item)}</small></div>
+      <div class="reorder-actions">
+        <button data-move-intervention="${index}" data-direction="-1" title="Monter">↑</button>
+        <button data-move-intervention="${index}" data-direction="1" title="Descendre">↓</button>
+        <button data-remove-intervention="${escapeAttr(commandId(item))}" title="Retirer">×</button>
+      </div>
+    </div>
+  `).join("") : `<p class="empty-inline">Ajoutez des fiches depuis la vue principale.</p>`;
+
+  $$('[data-move-intervention]').forEach((button) => button.addEventListener("click", () => {
+    const index = Number(button.dataset.moveIntervention);
+    const target = index + Number(button.dataset.direction);
+    if (target < 0 || target >= state.intervention.length) return;
+    [state.intervention[index], state.intervention[target]] = [state.intervention[target], state.intervention[index]];
+    localStorage.setItem("cisco-cli-intervention", JSON.stringify(state.intervention));
+    renderIntervention();
+  }));
+  $$('[data-remove-intervention]').forEach((button) => button.addEventListener("click", () => {
+    state.intervention = state.intervention.filter((id) => id !== button.dataset.removeIntervention);
+    localStorage.setItem("cisco-cli-intervention", JSON.stringify(state.intervention));
+    renderIntervention();
+    renderCards();
+  }));
+}
+
+function compareOutputs() {
+  const before = new Set($("#beforeOutput").value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean));
+  const after = new Set($("#afterOutput").value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean));
+  const added = [...after].filter((line) => !before.has(line));
+  const removed = [...before].filter((line) => !after.has(line));
+  $("#comparisonResult").innerHTML = `
+    <div class="diff-summary"><strong>${added.length} ligne(s) ajoutee(s)</strong><strong>${removed.length} ligne(s) retiree(s)</strong></div>
+    ${added.length ? `<pre class="diff-added"><code>${escapeHtml(added.map((line) => `+ ${line}`).join("\n"))}</code></pre>` : ""}
+    ${removed.length ? `<pre class="diff-removed"><code>${escapeHtml(removed.map((line) => `- ${line}`).join("\n"))}</code></pre>` : ""}
+  `;
+}
+
+function renderJournal() {
+  $("#journalList").innerHTML = state.journal.length ? state.journal.map((entry, index) => `
+    <div class="journal-item"><time>${escapeHtml(entry.time)}</time><p>${escapeHtml(entry.text)}</p><button data-remove-journal="${index}" title="Supprimer">×</button></div>
+  `).join("") : `<p class="empty-inline">Le journal est vide.</p>`;
+  $$('[data-remove-journal]').forEach((button) => button.addEventListener("click", () => {
+    state.journal.splice(Number(button.dataset.removeJournal), 1);
+    localStorage.setItem("cisco-cli-journal", JSON.stringify(state.journal));
+    renderJournal();
+  }));
+}
+
+function renderSymptomMatrix() {
+  $("#symptomMatrix").innerHTML = (CISCO_DATA.diagnostics || []).map((item, index) => `
+    <button type="button" data-diagnostic-index="${index}"><strong>${escapeHtml(item.symptom)}</strong><span>${escapeHtml(item.steps.slice(0, 3).map((step) => step.command).join(" · "))}</span></button>
+  `).join("");
+  $$('[data-diagnostic-index]').forEach((button) => button.addEventListener("click", () => {
+    $("#diagnosticSelect").value = button.dataset.diagnosticIndex;
+    renderDiagnostics();
+    $("#diagnosticSelect").scrollIntoView({ block: "center", behavior: "smooth" });
+  }));
 }
 
 function renderGlossary() {
@@ -672,6 +897,7 @@ function render() {
 }
 
 function init() {
+  const requestedView = new URLSearchParams(location.search).get("view");
   $("#searchInput").addEventListener("input", (event) => {
     state.query = event.target.value;
     state.activeResultIndex = state.query.trim() ? 0 : -1;
@@ -702,6 +928,13 @@ function init() {
     tab.addEventListener("click", () => setView(tab.dataset.view));
   });
 
+  $("#equipmentProfile").value = state.equipmentProfile;
+  $("#equipmentProfile").addEventListener("change", (event) => {
+    state.equipmentProfile = event.target.value;
+    localStorage.setItem("cisco-cli-equipment-profile", state.equipmentProfile);
+    renderCards();
+  });
+
   $$("[data-session-param]").forEach((input) => {
     input.addEventListener("input", () => {
       state.sessionParams[input.dataset.sessionParam] = input.value.trim();
@@ -723,6 +956,47 @@ function init() {
 
   $("#calcIp").addEventListener("input", renderIpCalculator);
   $("#calcMask").addEventListener("input", renderIpCalculator);
+
+  $("#analyzeOutputBtn").addEventListener("click", renderCliAnalysis);
+  $("#clearOutputBtn").addEventListener("click", () => {
+    $("#cliOutputInput").value = "";
+    $("#cliAnalysisResult").innerHTML = "";
+  });
+  $("#redactOutputBtn").addEventListener("click", () => {
+    $("#cliOutputInput").value = redactSensitiveData($("#cliOutputInput").value);
+  });
+  $("#diagnosticSelect").addEventListener("change", renderDiagnostics);
+  $("#exportInterventionBtn").addEventListener("click", () => {
+    if (!state.intervention.length) return;
+    downloadTextFile(`intervention-cisco-${new Date().toISOString().slice(0, 10)}.cfg`, interventionExportText());
+  });
+  $("#clearInterventionBtn").addEventListener("click", () => {
+    state.intervention = [];
+    localStorage.removeItem("cisco-cli-intervention");
+    renderIntervention();
+    renderCards();
+  });
+  $("#compareOutputsBtn").addEventListener("click", compareOutputs);
+  $("#addJournalBtn").addEventListener("click", () => {
+    const input = $("#journalInput");
+    if (!input.value.trim()) return;
+    state.journal.push({ time: new Date().toLocaleString("fr-FR"), text: input.value.trim() });
+    localStorage.setItem("cisco-cli-journal", JSON.stringify(state.journal));
+    input.value = "";
+    renderJournal();
+  });
+  $("#journalInput").addEventListener("keydown", (event) => {
+    if (event.key === "Enter") $("#addJournalBtn").click();
+  });
+  $("#exportJournalBtn").addEventListener("click", () => {
+    if (!state.journal.length) return;
+    downloadTextFile(`journal-incident-${new Date().toISOString().slice(0, 10)}.txt`, state.journal.map((entry) => `[${entry.time}] ${entry.text}`).join("\n"));
+  });
+  $("#clearJournalBtn").addEventListener("click", () => {
+    state.journal = [];
+    localStorage.removeItem("cisco-cli-journal");
+    renderJournal();
+  });
 
   $("#themeBtn").addEventListener("click", () => {
     document.body.classList.toggle("light");
@@ -771,6 +1045,13 @@ function init() {
   renderScenarios();
   renderEmergency();
   renderGlossary();
+  renderDiagnostics();
+  renderIntervention();
+  renderJournal();
+  renderSymptomMatrix();
+  if (["cards", "tools", "operations", "emergency", "scenarios", "glossary"].includes(requestedView)) {
+    setView(requestedView);
+  }
   setAgentOpen(state.agentOpen);
   renderAgentMessage("assistant", "Bonjour, je suis ton agent IA Cisco integre. Pose-moi une question sur une configuration, une verification ou un depannage; je reponds avec les commandes du lexique local.");
   registerServiceWorker();
@@ -778,7 +1059,7 @@ function init() {
 
 function registerServiceWorker() {
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
-    navigator.serviceWorker.register("./sw.js?v=20260709-4").catch(() => {});
+    navigator.serviceWorker.register("./sw.js?v=20260710-1").catch(() => {});
   }
 }
 

@@ -48,6 +48,14 @@ API securisee cote serveur afin de ne pas exposer de cle dans le navigateur.
 - Badges de compatibilite plateforme sur les fiches enrichies.
 - Version v3: enrichissement securite L2/L3 avec 802.1X, MAB, IP Source Guard, DAI, Private VLAN, ZBF, CoPP, MPP, AAA et durcissement management.
 - Diagnostic cables et liens physiques: TDR cuivre, interpretation de paires, erreurs CRC/drops et controles SFP/fibre.
+- Atelier terrain: analyse heuristique de sorties CLI, anonymisation des donnees, diagnostics guides et matrice symptome/commandes.
+- Constructeur d'intervention avec ordre des fiches, controles avant/apres, plan de rollback et export `.cfg`.
+- Comparaison de captures avant/apres et journal d'incident horodate conserves dans le navigateur.
+- Profils Catalyst IOS/IOS XE, Nexus NX-OS et ISR avec filtrage de compatibilite.
+- Haute disponibilite: HSRP, VRRP, GLBP, StackWise, SSO et NSF.
+- Supervision: Flexible NetFlow, IP SLA, tracking et ERSPAN.
+- Datacenter: vPC, VXLAN EVPN, FEX, transceivers et ressources ASIC Nexus.
+- Maintenance logicielle: controle d'image, boot, installation IOS XE et mise a jour NX-OS.
 
 ## Architecture et contribution
 

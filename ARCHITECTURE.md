@@ -9,7 +9,7 @@ Aucun secret, aucune base de donnees et aucun backend ne doivent etre requis pou
 
 1. `index.html`
    - Structure de l'interface.
-   - Points d'accroche des vues: fiches, outils, urgence, procedures, glossaire, agent local.
+   - Points d'accroche des vues: fiches, outils, atelier terrain, urgence, procedures, glossaire, agent local.
 
 2. `styles.css`
    - Design system CSS natif.
@@ -18,11 +18,12 @@ Aucun secret, aucune base de donnees et aucun backend ne doivent etre requis pou
 
 3. `data.js`
    - Source de donnees embarquee.
-   - Themes, fiches commandes, snippets interactifs, scenarios, urgence et glossaire.
+   - Themes, fiches commandes, snippets interactifs, diagnostics guides, scenarios, urgence et glossaire.
    - Format volontairement simple pour faciliter les contributions sans build.
 
 4. `app.js`
-   - Recherche fuzzy, filtres, favoris, agent local, snippets, export texte/PDF navigateur.
+   - Recherche fuzzy, profils plateforme, risques, favoris, agent local, snippets et exports.
+   - Analyse heuristique de sorties CLI, anonymisation, constructeur d'intervention, comparaison et journal.
    - Stockage utilisateur dans `localStorage`.
 
 5. PWA
@@ -39,6 +40,7 @@ Aucun secret, aucune base de donnees et aucun backend ne doivent etre requis pou
   title: "BGP voisin eBGP minimal",
   summary: "Etablit une session BGP externe et annonce un prefixe.",
   platforms: ["IOS", "IOS XE"],
+  risk: "modification",
   commands: [
     "router bgp 65010",
     "neighbor 203.0.113.1 remote-as 65000"
@@ -47,6 +49,10 @@ Aucun secret, aucune base de donnees et aucun backend ne doivent etre requis pou
   notes: [
     "Le prefixe annonce doit exister dans la table de routage.",
     "Filtrage et route-map sont indispensables en production."
+  ],
+  rollback: [
+    "router bgp 65010",
+    "no neighbor 203.0.113.1 remote-as 65000"
   ]
 }
 ```

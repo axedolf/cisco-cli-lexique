@@ -19,6 +19,10 @@ const CISCO_DATA = {
     { id: "troubleshoot", name: "Depannage", accent: "#a03b16" },
     { id: "wireless", name: "Notions wireless Cisco", accent: "#007078" },
     { id: "programmability", name: "Automatisation et programmabilite", accent: "#5c6bc0" },
+    { id: "high-availability", name: "Haute disponibilite", accent: "#2d7d46" },
+    { id: "observability", name: "Supervision et telemetrie", accent: "#006d77" },
+    { id: "datacenter", name: "Datacenter Nexus", accent: "#7a4e9d" },
+    { id: "software", name: "Logiciels, boot et mises a jour", accent: "#9a5b20" },
     { id: "emergency", name: "Cheat sheet d'urgence", accent: "#c2410c" }
   ],
   commands: [
@@ -1075,6 +1079,196 @@ const CISCO_DATA = {
       summary: "Rappel de haut niveau pour recuperation de mot de passe sur plateformes compatibles.",
       commands: ["rommon> confreg 0x2142", "rommon> reset", "copy startup-config running-config", "enable secret <nouveau-secret>", "config-register 0x2102", "copy running-config startup-config"],
       notes: ["Procedure dependante du modele et de la politique de securite.", "Planifier une fenetre de maintenance: un redemarrage est generalement necessaire."]
+    },
+    {
+      theme: "high-availability", type: "config", level: "intermediaire",
+      title: "Configurer HSRP avec suivi d'uplink",
+      summary: "Fournit une passerelle virtuelle resiliente et reduit la priorite si le chemin amont tombe.",
+      commands: ["track 10 interface TenGigabitEthernet1/1/1 line-protocol", "interface Vlan120", "ip address 10.120.0.2 255.255.255.0", "standby version 2", "standby 120 ip 10.120.0.1", "standby 120 priority 110", "standby 120 preempt delay minimum 60", "standby 120 track 10 decrement 30", "show standby brief"],
+      notes: ["Configurer l'autre equipement avec une adresse unique et une priorite inferieure.", "Tester la convergence et le retour du role actif en fenetre de maintenance."],
+      platforms: ["IOS", "IOS XE", "Catalyst 9000", "ISR"],
+      rollback: ["interface Vlan120", "no standby 120", "no track 10"]
+    },
+    {
+      theme: "high-availability", type: "config", level: "avance",
+      title: "Configurer VRRP et verifier GLBP",
+      summary: "Reference pour les protocoles de redondance de premier saut VRRP et GLBP.",
+      commands: ["interface Vlan130", "vrrp 130 ip 10.130.0.1", "vrrp 130 priority 110", "vrrp 130 preempt delay minimum 60", "show vrrp brief", "show glbp brief"],
+      notes: ["VRRP est standard; GLBP est une technologie Cisco offrant un partage de charge.", "La syntaxe VRRP peut differer selon la version IOS XE."],
+      platforms: ["IOS", "IOS XE", "Catalyst 9000", "ISR"],
+      rollback: ["interface Vlan130", "no vrrp 130"]
+    },
+    {
+      theme: "high-availability", type: "verify", level: "avance",
+      title: "Verifier StackWise SSO et NSF",
+      summary: "Controle les membres de pile, la redondance du supervisor et la continuite du routage.",
+      commands: ["show switch", "show switch stack-ports summary", "show redundancy", "show redundancy states", "show platform", "show module", "show ip protocols | include NSF|SSO", "show logging | include STACK|REDUNDANCY|RF|SWITCHOVER"],
+      notes: ["StackWise, StackWise Virtual et SSO ne partagent pas exactement les memes commandes.", "Verifier les versions logicielles et priorites des membres avant un remplacement."],
+      platforms: ["IOS XE", "Catalyst 9000"]
+    },
+    {
+      theme: "observability", type: "config", level: "avance",
+      title: "Configurer Flexible NetFlow IPv4",
+      summary: "Exporte les conversations IP vers un collecteur pour analyse de trafic.",
+      commands: ["flow record NETFLOW-IPV4", "match ipv4 source address", "match ipv4 destination address", "match ip protocol", "collect counter bytes long", "collect counter packets long", "flow exporter COLLECTOR", "destination 10.50.20.40", "transport udp 2055", "source Loopback0", "flow monitor MONITOR-IPV4", "record NETFLOW-IPV4", "exporter COLLECTOR", "interface TenGigabitEthernet1/0/48", "ip flow monitor MONITOR-IPV4 input", "show flow monitor MONITOR-IPV4 cache"],
+      notes: ["Adapter record et collect aux besoins et capacites de la plateforme.", "Limiter l'impact CPU et bande passante d'export."],
+      platforms: ["IOS XE", "Catalyst 9000", "ISR"],
+      rollback: ["interface TenGigabitEthernet1/0/48", "no ip flow monitor MONITOR-IPV4 input", "no flow monitor MONITOR-IPV4", "no flow exporter COLLECTOR", "no flow record NETFLOW-IPV4"]
+    },
+    {
+      theme: "observability", type: "config", level: "intermediaire",
+      title: "Superviser une destination avec IP SLA et tracking",
+      summary: "Teste une destination depuis une source precise et expose son etat au routage ou a HSRP.",
+      commands: ["ip sla 20", "icmp-echo 198.51.100.10 source-interface Vlan120", "frequency 10", "timeout 2000", "exit", "ip sla schedule 20 life forever start-time now", "track 20 ip sla 20 reachability", "show ip sla statistics 20", "show track 20"],
+      notes: ["La cible doit autoriser ICMP et representer correctement le service surveille.", "Eviter une frequence trop agressive."],
+      platforms: ["IOS", "IOS XE", "Catalyst 9000", "ISR"],
+      rollback: ["no track 20", "no ip sla schedule 20", "no ip sla 20"]
+    },
+    {
+      theme: "observability", type: "config", level: "avance",
+      title: "Configurer ERSPAN source sur IOS XE",
+      summary: "Envoie une copie du trafic vers un analyseur distant a travers un reseau IP.",
+      commands: ["monitor session 10 type erspan-source", "source interface GigabitEthernet1/0/24 both", "destination", "erspan-id 10", "ip address 10.60.30.50", "origin ip address 10.60.30.1", "no shutdown", "show monitor session 10"],
+      notes: ["La syntaxe et les capacites ERSPAN varient fortement selon l'ASIC et IOS XE.", "Prevoir la bande passante generee par la copie de trafic."],
+      platforms: ["IOS XE", "Catalyst 9000"],
+      rollback: ["no monitor session 10"]
+    },
+    {
+      theme: "datacenter", type: "config", level: "avance",
+      title: "Configurer un domaine vPC Nexus",
+      summary: "Met en place le peer-keepalive, le peer-link et un port-channel vPC vers un equipement doublement attache.",
+      commands: ["feature vpc", "vpc domain 10", "peer-keepalive destination 10.255.0.12 source 10.255.0.11 vrf management", "interface port-channel10", "switchport mode trunk", "spanning-tree port type network", "vpc peer-link", "interface port-channel120", "switchport mode trunk", "vpc 120", "show vpc brief"],
+      notes: ["Le peer-keepalive ne remplace pas le peer-link.", "Verifier coherence VLAN, MTU et parametres de port-channel sur les deux peers."],
+      platforms: ["NX-OS", "Nexus 9000"],
+      rollback: ["interface port-channel120", "no vpc 120", "interface port-channel10", "no vpc peer-link", "no vpc domain 10"]
+    },
+    {
+      theme: "datacenter", type: "troubleshoot", level: "avance",
+      title: "Diagnostiquer vPC incoherent ou suspendu",
+      summary: "Recherche les erreurs de coherence et la raison de suspension d'un membre vPC.",
+      commands: ["show vpc", "show vpc brief", "show vpc consistency-parameters global", "show vpc consistency-parameters interface port-channel120", "show port-channel summary", "show interface status err-disabled", "show logging logfile | include VPC|ETHPORT|LACP"],
+      notes: ["Corriger d'abord les incoherences type-1 qui peuvent suspendre le vPC.", "Comparer la configuration des deux peers."],
+      platforms: ["NX-OS", "Nexus 9000"]
+    },
+    {
+      theme: "datacenter", type: "verify", level: "avance",
+      title: "Verifier VXLAN EVPN sur Nexus 9000",
+      summary: "Controle NVE, VNI, pairs VTEP et routes EVPN dans une fabric VXLAN.",
+      commands: ["show nve interface nve1", "show nve peers", "show nve vni", "show bgp l2vpn evpn summary", "show bgp l2vpn evpn", "show l2route evpn mac all", "show forwarding internal nve vlan-floodlist"],
+      notes: ["Verifier sous-couche IP, reachabilite des loopbacks VTEP et session MP-BGP avant le plan de donnees.", "Certaines commandes internes dependent de la version NX-OS."],
+      platforms: ["NX-OS", "Nexus 9000"]
+    },
+    {
+      theme: "datacenter", type: "verify", level: "avance",
+      title: "Verifier FEX transceivers et ressources ASIC Nexus",
+      summary: "Controle les Fabric Extenders, optiques et ressources materielles d'un Nexus.",
+      commands: ["show fex", "show fex detail", "show interface transceiver details", "show module", "show hardware internal errors all", "show hardware capacity", "show system resources"],
+      notes: ["Les commandes hardware internal sont avancees et peuvent varier selon le modele.", "Ne modifier aucun registre ASIC sans instruction du support Cisco."],
+      platforms: ["NX-OS", "Nexus 5000", "Nexus 7000", "Nexus 9000"]
+    },
+    {
+      theme: "software", type: "config", level: "avance",
+      title: "Mettre a jour IOS XE en mode install",
+      summary: "Ajoute, active puis valide une image IOS XE avec controle de compatibilite et retour arriere planifie.",
+      commands: ["show version", "show install summary", "dir flash:", "verify /sha512 flash:cat9k_iosxe.17.12.04.SPA.bin", "copy running-config startup-config", "install add file flash:cat9k_iosxe.17.12.04.SPA.bin activate commit", "show install summary", "show version"],
+      notes: ["Lire les release notes et verifier espace flash, ROMMON, compatibilite stack et chemin de mise a niveau.", "La phase activate peut recharger l'equipement."],
+      platforms: ["IOS XE", "Catalyst 9000"],
+      risk: "critique",
+      rollback: ["show install rollback to committed", "install rollback to committed", "show install summary"]
+    },
+    {
+      theme: "software", type: "verify", level: "intermediaire",
+      title: "Verifier image boot packages.conf et espace flash",
+      summary: "Valide la variable de demarrage, les paquets installes et l'integrite de l'image avant maintenance.",
+      commands: ["show boot", "show version | include System image|INSTALL", "show running-config | include ^boot system", "show install summary", "dir flash:", "more flash:packages.conf", "verify /sha512 flash:<image.bin>"],
+      notes: ["En mode install Catalyst 9000, le boot pointe generalement vers flash:packages.conf.", "Comparer le hash avec celui publie par Cisco."],
+      platforms: ["IOS XE", "Catalyst 9000"]
+    },
+    {
+      theme: "software", type: "config", level: "avance",
+      title: "Definir et restaurer le demarrage IOS classique",
+      summary: "Configure l'image de boot et fournit les controles utiles en cas de retour ROMMON.",
+      commands: ["no boot system", "boot system flash:<image.bin>", "config-register 0x2102", "copy running-config startup-config", "show bootvar", "show rom-monitor switch all"],
+      notes: ["La syntaxe varie entre IOS classique, IOS XE bundle/install et plateformes empilees.", "Conserver un acces console et une image de secours valide."],
+      platforms: ["IOS", "IOS XE", "Catalyst", "ISR"],
+      risk: "critique",
+      rollback: ["no boot system", "boot system flash:<ancienne-image.bin>", "config-register 0x2102", "copy running-config startup-config"]
+    },
+    {
+      theme: "software", type: "config", level: "avance",
+      title: "Mettre a jour NX-OS avec controle d'impact",
+      summary: "Verifie l'impact puis lance une installation NX-OS sur Nexus compatible.",
+      commands: ["show version", "dir bootflash:", "show install all impact nxos bootflash:nxos64-cs.10.4.3.F.bin", "install all nxos bootflash:nxos64-cs.10.4.3.F.bin", "show install all status", "show version"],
+      notes: ["Verifier ISSU, compatibilite BIOS/EPLD, vPC et chemin de mise a niveau dans les release notes.", "Une interruption reste possible selon plateforme et changement de version."],
+      platforms: ["NX-OS", "Nexus 9000"],
+      risk: "critique",
+      rollback: ["show install all status", "show incompatibility-all nxos bootflash:<ancienne-image.bin>", "install all nxos bootflash:<ancienne-image.bin>"]
+    },
+    {
+      theme: "software", type: "verify", level: "intermediaire",
+      title: "Comparer anciennes et nouvelles syntaxes Cisco",
+      summary: "Rappelle les principales differences de syntaxe entre IOS historique, IOS XE moderne et NX-OS.",
+      commands: ["show interfaces status", "show interface status", "show ip device tracking all", "show device-tracking database", "show etherchannel summary", "show port-channel summary", "write memory", "copy running-config startup-config"],
+      notes: ["IOS XE moderne emploie souvent device-tracking policy et access-session en remplacement de syntaxes historiques.", "NX-OS utilise feature pour activer plusieurs fonctions et show port-channel summary au lieu de show etherchannel summary."],
+      platforms: ["IOS", "IOS XE", "NX-OS", "Catalyst 9000", "Nexus 9000"]
+    }
+  ],
+  diagnostics: [
+    {
+      symptom: "Le poste n'obtient pas d'adresse IP",
+      steps: [
+        { check: "Etat du port et VLAN", command: "show interfaces status", next: "Le port doit etre connected dans le VLAN d'acces attendu." },
+        { check: "Configuration du port", command: "show interfaces <interface-name> switchport", next: "Corriger access VLAN, trunk ou voice VLAN si necessaire." },
+        { check: "Securite DHCP", command: "show ip dhcp snooping binding", next: "Verifier VLAN active, uplink trusted et absence de rate-limit excessif." },
+        { check: "Relais DHCP", command: "show running-config interface Vlan<vlan-id>", next: "Verifier ip helper-address, routage et ACL vers le serveur DHCP." }
+      ]
+    },
+    {
+      symptom: "Le telephone IP ne s'allume pas",
+      steps: [
+        { check: "Budget PoE", command: "show power inline", next: "Verifier puissance disponible et etat du port." },
+        { check: "Detail du port", command: "show power inline <interface-name> detail", next: "Rechercher denied, faulty, over-current ou classe inattendue." },
+        { check: "Cable", command: "test cable-diagnostics tdr interface <interface-name>", next: "Executer hors trafic selon plateforme puis lire le resultat TDR." },
+        { check: "Relance controlee", command: "interface <interface-name> ; power inline never ; power inline auto", next: "Attendre la renegociation et surveiller les logs." }
+      ]
+    },
+    {
+      symptom: "Le port monte et descend",
+      steps: [
+        { check: "Historique des changements", command: "show logging | include <interface-name>|LINK|LINEPROTO", next: "Noter la frequence et la cause immediate." },
+        { check: "Compteurs physiques", command: "show interfaces <interface-name> counters errors", next: "CRC et input errors orientent vers cable, optique ou duplex." },
+        { check: "Transceiver ou TDR", command: "show interfaces transceiver detail", next: "Comparer niveaux optiques ou lancer un TDR sur cuivre." },
+        { check: "Err-disable", command: "show errdisable recovery", next: "Corriger la cause avant shutdown/no shutdown." }
+      ]
+    },
+    {
+      symptom: "Le ping inter-VLAN echoue",
+      steps: [
+        { check: "SVI et routage", command: "show ip interface brief | include Vlan", next: "Les SVI source et destination doivent etre up/up." },
+        { check: "Table de routage", command: "show ip route <destination-ip>", next: "Verifier route connectee, statique ou dynamique." },
+        { check: "ARP", command: "show ip arp <destination-ip>", next: "Une entree incomplete oriente vers VLAN, trunk ou hote." },
+        { check: "Test source", command: "ping <destination-ip> source Vlan<vlan-id>", next: "Comparer le resultat depuis la passerelle et depuis le client." },
+        { check: "ACL", command: "show ip access-lists", next: "Verifier compteurs de deny et sens d'application." }
+      ]
+    },
+    {
+      symptom: "Le voisin OSPF ne passe pas FULL",
+      steps: [
+        { check: "Etat du voisin", command: "show ip ospf neighbor", next: "Noter l'etat exact: INIT, EXSTART, EXCHANGE ou 2-WAY." },
+        { check: "Parametres interface", command: "show ip ospf interface <interface-name>", next: "Comparer area, timers, type reseau, cout et MTU." },
+        { check: "Authentification", command: "show running-config interface <interface-name>", next: "Verifier mode et cle des deux cotes." },
+        { check: "Journaux", command: "show logging | include OSPF|ADJCHG", next: "Identifier mismatch, duplicate router-id ou perte de hellos." }
+      ]
+    },
+    {
+      symptom: "Pertes reseau ou debit instable",
+      steps: [
+        { check: "Erreurs interfaces", command: "show interfaces counters errors", next: "Localiser le port avec CRC, drops, collisions ou overruns." },
+        { check: "Boucle ou tempete", command: "show spanning-tree detail | include occurr|from|executing", next: "Rechercher changements STP et volume broadcast." },
+        { check: "CPU", command: "show processes cpu sorted 5sec", next: "Un CPU eleve peut provoquer pertes de controle et lenteurs CLI." },
+        { check: "QoS", command: "show policy-map interface", next: "Verifier drops de file, policing et saturation." },
+        { check: "Chemin", command: "traceroute <destination-ip> source <source-ip>", next: "Comparer chemin et latence avec la route attendue." }
+      ]
     }
   ],
   snippets: [
