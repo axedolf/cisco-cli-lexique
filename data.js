@@ -643,7 +643,7 @@ const CISCO_DATA = {
       theme: "security", type: "security", level: "avance",
       title: "Durcissement SSH et HTTPS administration",
       summary: "Renforce les services d'administration et limite leur exposition.",
-      commands: ["ip ssh version 2", "ip ssh time-out 60", "ip ssh authentication-retries 3", "ip http secure-server", "no ip http server", "ip http authentication aaa", "ip access-list standard MGMT-SOURCES", "permit 192.168.99.0 0.0.0.255", "line vty 0 15", "transport input ssh", "access-class MGMT-SOURCES in", "exec-timeout 10 0", "show ip ssh", "show ip http server secure status"],
+      commands: ["ip ssh version 2", "ip ssh logging events", "ip ssh time-out 60", "ip ssh authentication-retries 3", "ip http secure-server", "no ip http server", "ip http authentication aaa", "ip access-list standard MGMT-SOURCES", "permit 192.168.99.0 0.0.0.255", "line vty 0 15", "transport input ssh", "access-class MGMT-SOURCES in", "exec-timeout 10 0", "show ip ssh", "show ip http server secure status"],
       platforms: ["IOS", "IOS XE", "Catalyst", "ISR", "ASR"],
       aliases: ["ssh hardening", "https hardening", "no ip http server", "access-class"],
       notes: ["Desactiver HTTP clair sauf besoin explicite et temporaire.", "Combiner ACL VTY, AAA, VRF management et journalisation des connexions."]
@@ -1211,6 +1211,78 @@ const CISCO_DATA = {
       commands: ["show interfaces status", "show interface status", "show ip device tracking all", "show device-tracking database", "show etherchannel summary", "show port-channel summary", "write memory", "copy running-config startup-config"],
       notes: ["IOS XE moderne emploie souvent device-tracking policy et access-session en remplacement de syntaxes historiques.", "NX-OS utilise feature pour activer plusieurs fonctions et show port-channel summary au lieu de show etherchannel summary."],
       platforms: ["IOS", "IOS XE", "NX-OS", "Catalyst 9000", "Nexus 9000"]
+    },
+    {
+      theme: "maintenance", type: "config", level: "intermediaire",
+      title: "Planifier verifier et annuler un rechargement",
+      summary: "Programme un reload pendant une fenetre de maintenance et permet de le controler ou de l'annuler.",
+      commands: ["reload in 15 reason Maintenance planifiee", "show reload", "reload cancel", "reload at 02:00 reason Maintenance nocturne", "show reload"],
+      notes: ["Verifier l'horloge et le fuseau avant reload at.", "Sauvegarder la configuration et confirmer l'acces console avant toute programmation.", "La syntaxe reason et la disponibilite de show reload peuvent varier selon plateforme."],
+      aliases: ["reload in", "reload at", "reload cancel", "show reload", "redemarrage planifie"],
+      platforms: ["IOS", "IOS XE", "Catalyst", "ISR", "ASR"],
+      risk: "critique",
+      rollback: ["show reload", "reload cancel"]
+    },
+    {
+      theme: "services", type: "config", level: "base",
+      title: "Regler manuellement date heure et fuseau",
+      summary: "Initialise l'horloge et le passage heure d'ete lorsqu'aucun serveur NTP n'est encore disponible.",
+      commands: ["clock set 14:30:00 12 July 2026", "configure terminal", "clock timezone CET 1 0", "clock summer-time CEST recurring last Sun Mar 2:00 last Sun Oct 3:00", "end", "show clock detail"],
+      notes: ["Preferer NTP pour maintenir une heure fiable apres l'initialisation.", "Adapter les regles de changement d'heure au pays et a la politique locale."],
+      aliases: ["clock set", "clock timezone", "summer-time", "heure manuelle"],
+      platforms: ["IOS", "IOS XE", "Catalyst", "ISR", "ASR"]
+    },
+    {
+      theme: "switching", type: "config", level: "intermediaire",
+      title: "Ajouter ou retirer des VLAN sur un trunk existant",
+      summary: "Modifie la liste autorisee sans remplacer accidentellement les VLAN deja transportes.",
+      commands: ["interface <interface-name>", "switchport trunk allowed vlan add 120,130", "switchport trunk allowed vlan remove 30", "end", "show interfaces trunk", "show interfaces <interface-name> switchport"],
+      notes: ["Sans le mot add, switchport trunk allowed vlan remplace la liste complete.", "Verifier les deux extremites du trunk et l'etat STP apres modification."],
+      aliases: ["allowed vlan add", "allowed vlan remove", "modifier trunk", "pruning vlan trunk"],
+      platforms: ["IOS", "IOS XE", "Catalyst"],
+      rollback: ["interface <interface-name>", "switchport trunk allowed vlan remove 120,130", "switchport trunk allowed vlan add 30"]
+    },
+    {
+      theme: "switching", type: "config", level: "avance",
+      title: "Configurer Rapid-PVST root port-priority et cout",
+      summary: "Selectionne le root bridge et influence le chemin STP prefere par VLAN.",
+      commands: ["spanning-tree mode rapid-pvst", "spanning-tree vlan 10-30 root primary", "interface <interface-name>", "spanning-tree vlan 10-30 port-priority 64", "spanning-tree vlan 10-30 cost 20000", "end", "show spanning-tree vlan 10", "show spanning-tree root"],
+      notes: ["Une valeur de priorite ou de cout plus faible est preferee.", "La macro root primary ajuste la priorite selon la topologie observee; coordonner root primaire et secondaire.", "Modifier STP peut provoquer une reconvergence et une coupure temporaire."],
+      aliases: ["rapid-pvst", "root primary", "port-priority", "spanning-tree cost"],
+      platforms: ["IOS", "IOS XE", "Catalyst 9000"],
+      risk: "interruption",
+      rollback: ["no spanning-tree vlan 10-30 root primary", "interface <interface-name>", "no spanning-tree vlan 10-30 port-priority", "no spanning-tree vlan 10-30 cost"]
+    },
+    {
+      theme: "qos", type: "config", level: "intermediaire",
+      title: "Activer Auto-QoS pour telephone Cisco ou uplink",
+      summary: "Genere automatiquement les classes et politiques QoS adaptees a la voix sur Catalyst compatible.",
+      commands: ["interface <interface-name>", "auto qos voip cisco-phone", "end", "show auto qos interface <interface-name>", "show policy-map interface <interface-name>", "show running-config interface <interface-name>"],
+      notes: ["Utiliser auto qos voip trust sur un uplink deja marque et cisco-phone sur un port terminal.", "Auto-QoS cree des objets globaux; no auto qos voip sur le dernier port ne supprime pas forcement tous ces objets.", "Verifier les capacites du modele et la politique QoS existante avant activation."],
+      aliases: ["auto qos voip cisco-phone", "auto qos voip trust", "qos telephone"],
+      platforms: ["IOS", "IOS XE", "Catalyst 1000", "Catalyst 9000"],
+      rollback: ["interface <interface-name>", "no auto qos voip"]
+    },
+    {
+      theme: "high-availability", type: "config", level: "avance",
+      title: "Administrer les membres et ports d'une pile StackWise",
+      summary: "Controle la pile, ajuste la priorite, renumerote ou nettoie un membre provisionne.",
+      commands: ["show switch detail", "show switch stack-ports summary", "show version", "configure terminal", "switch 2 priority 15", "switch 3 renumber 2", "no switch 2 provision", "end", "reload slot 4"],
+      notes: ["La renumerotation prend effet apres redemarrage et change les noms d'interfaces du membre.", "Ne retirer une ligne provision qu'apres avoir confirme que le membre est Removed.", "reload slot coupe uniquement le membre cible mais peut affecter les liens et alimentations raccordes."],
+      aliases: ["switch priority", "switch renumber", "switch provision", "reload slot", "stackwise membre"],
+      platforms: ["IOS", "IOS XE", "Catalyst 2960X", "Catalyst 3750", "Catalyst 9000"],
+      risk: "critique",
+      rollback: ["show switch", "switch 2 renumber 3", "switch 2 priority 1"]
+    },
+    {
+      theme: "troubleshoot", type: "troubleshoot", level: "avance",
+      title: "Collecter un rapport complet pour diagnostic TAC",
+      summary: "Rassemble inventaire, ressources, statistiques et sortie tech-support avant escalade.",
+      commands: ["terminal length 0", "show clock detail", "show version", "show inventory", "show platform", "show processes cpu sorted 5sec", "show processes memory sorted", "show interfaces stats", "show environment all", "show logging", "show tech-support", "terminal length 24"],
+      notes: ["show tech-support peut etre long et volumineux; eviter pendant une saturation CPU critique.", "La sortie peut contenir IP, noms, numeros de serie et extraits de configuration: anonymiser avant partage externe.", "Capturer la sortie dans le terminal plutot que la copier manuellement page par page."],
+      aliases: ["show tech-support", "show interfaces stats", "rapport tac", "collecte diagnostic"],
+      platforms: ["IOS", "IOS XE", "NX-OS", "Catalyst", "ISR", "ASR"],
+      warnings: ["La collecte peut exposer des informations sensibles et generer une sortie importante."]
     }
   ],
   diagnostics: [

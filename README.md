@@ -27,7 +27,7 @@ La version GitHub Pages est installable comme PWA depuis Chrome, Edge ou Safari 
 
 Pour generer un APK Android ou une application macOS Electron, voir `PACKAGING.md`.
 
-APK Android signe: [Cisco-CLI-Lexique-Android-v1.1.0.apk](downloads/Cisco-CLI-Lexique-Android-v1.1.0.apk)
+APK Android signe: [Cisco-CLI-Lexique-Android-v1.1.1.apk](downloads/Cisco-CLI-Lexique-Android-v1.1.1.apk)
 
 ## Agent IA integre
 
@@ -69,6 +69,11 @@ API securisee cote serveur afin de ne pas exposer de cle dans le navigateur.
 
 Base inspiree du projet open source:
 https://github.com/grplyler/cisco-cheatsheet#inter-vlan-routing
+
+Complements compares puis reformules a partir de:
+
+- https://routeur.clemanet.com/index.php
+- https://www.clemanet.com/switch-cisco.php
 
 Les commandes Cisco IOS / IOS XE varient selon les versions, licences et modeles.
 Tester toute commande critique en laboratoire ou fenetre de maintenance avant production.

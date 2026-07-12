@@ -25,11 +25,11 @@ Une version Android native Capacitor est incluse dans le dossier `android/`.
 
 APK signe pret a installer:
 
-`downloads/Cisco-CLI-Lexique-Android-v1.1.0.apk`
+`downloads/Cisco-CLI-Lexique-Android-v1.1.1.apk`
 
 Lien public direct apres publication GitHub Pages:
 
-https://axedolf.github.io/cisco-cli-lexique/downloads/Cisco-CLI-Lexique-Android-v1.1.0.apk
+https://axedolf.github.io/cisco-cli-lexique/downloads/Cisco-CLI-Lexique-Android-v1.1.1.apk
 
 Pre-requis:
 

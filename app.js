@@ -171,7 +171,7 @@ function commandsForExport(commands) {
 
 function commandMode(command) {
   const line = command.trim().toLowerCase();
-  if (/^(show|ping|traceroute|telnet|ssh|copy|write|clear|debug|undebug|terminal|test|monitor capture|dir|reload|more)\b/.test(line)) return "Switch#";
+  if (/^(show|ping|traceroute|telnet|ssh|copy|write|clear|debug|undebug|terminal|test|monitor capture|dir|reload|clock set|more)\b/.test(line)) return "Switch#";
   if (/^(configure terminal|conf t|enable|disable|end)\b/.test(line)) return "Switch#";
   if (/^(interface|router|ip access-list|line|vlan|ip dhcp pool|route-map|policy-map|class-map|ipv6 router)\b/.test(line)) return "Switch(config)#";
   if (/^(exit|description|ip address|no shutdown|shutdown|switchport|spanning-tree|power inline|ip ospf|ipv6 ospf|encapsulation|channel-group|standby|ip helper-address|service-policy)\b/.test(line)) return "Switch(config-if)#";
@@ -1060,7 +1060,7 @@ function init() {
 function registerServiceWorker() {
   const isNativeApp = window.Capacitor?.isNativePlatform?.() === true;
   if ("serviceWorker" in navigator && location.protocol !== "file:" && !isNativeApp) {
-    navigator.serviceWorker.register("./sw.js?v=20260710-2").catch(() => {});
+    navigator.serviceWorker.register("./sw.js?v=20260712-1").catch(() => {});
   }
 }
 

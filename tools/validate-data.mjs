@@ -54,7 +54,13 @@ const requiredSearches = [
   ["netflow", "Configurer Flexible NetFlow IPv4"],
   ["vpc", "Configurer un domaine vPC Nexus"],
   ["vxlan", "Verifier VXLAN EVPN sur Nexus 9000"],
-  ["install add", "Mettre a jour IOS XE en mode install"]
+  ["install add", "Mettre a jour IOS XE en mode install"],
+  ["reload cancel", "Planifier verifier et annuler un rechargement"],
+  ["allowed vlan add", "Ajouter ou retirer des VLAN sur un trunk existant"],
+  ["rapid-pvst", "Configurer Rapid-PVST root port-priority et cout"],
+  ["auto qos voip cisco-phone", "Activer Auto-QoS pour telephone Cisco ou uplink"],
+  ["switch 3 renumber 2", "Administrer les membres et ports d'une pile StackWise"],
+  ["show tech-support", "Collecter un rapport complet pour diagnostic TAC"]
 ];
 
 if (!Array.isArray(data.diagnostics) || data.diagnostics.length < 6) {
