@@ -289,27 +289,31 @@ function renderNav() {
   const nav = $("#themeNav");
   const total = CISCO_DATA.commands.length;
   const buttons = [
-    `<button class="theme-link ${state.theme === "all" ? "active" : ""}" data-theme="all"><span>Tous les themes</span><strong>${total}</strong></button>`
+    `<a class="theme-link ${state.theme === "all" ? "active" : ""}" data-theme="all" href="${filterNavigationUrl("all")}"><span>Tous les themes</span><strong>${total}</strong></a>`
   ];
 
   CISCO_DATA.themes.forEach((theme) => {
     const count = CISCO_DATA.commands.filter((item) => item.theme === theme.id).length;
     buttons.push(`
-      <button class="theme-link ${state.theme === theme.id ? "active" : ""}" data-theme="${theme.id}" style="--accent:${theme.accent}">
+      <a class="theme-link ${state.theme === theme.id ? "active" : ""}" data-theme="${theme.id}" href="${filterNavigationUrl(theme.id)}" style="--accent:${theme.accent}">
         <span>${theme.name}</span>
         <strong>${count}</strong>
-      </button>
+      </a>
     `);
   });
 
   nav.innerHTML = buttons.join("");
-  $$(".theme-link").forEach((button) => {
-    button.addEventListener("click", () => {
-      state.theme = button.dataset.theme;
-      state.visibleLimit = VISIBLE_COMMAND_STEP;
-      render();
-    });
-  });
+}
+
+function filterNavigationUrl(theme) {
+  const params = new URLSearchParams();
+  if (state.favoritesOnly) {
+    params.set("favorites", "1");
+  } else {
+    params.set("type", state.type);
+  }
+  if (theme !== "all") params.set("theme", theme);
+  return `./index.html?${params.toString()}`;
 }
 
 function renderCards() {
@@ -972,9 +976,13 @@ function init() {
   const searchParams = new URLSearchParams(location.search);
   const requestedView = searchParams.get("view");
   const requestedType = searchParams.get("type");
+  const requestedTheme = searchParams.get("theme");
   state.favoritesOnly = searchParams.get("favorites") === "1";
   if (["all", "config", "verify", "troubleshoot", "security"].includes(requestedType)) {
     state.type = requestedType;
+  }
+  if (requestedTheme === "all" || CISCO_DATA.themes.some((theme) => theme.id === requestedTheme)) {
+    state.theme = requestedTheme;
   }
   $("#searchInput").addEventListener("input", (event) => {
     state.query = event.target.value;
@@ -1137,8 +1145,18 @@ function init() {
 function registerServiceWorker() {
   const isNativeApp = window.Capacitor?.isNativePlatform?.() === true;
   if ("serviceWorker" in navigator && location.protocol !== "file:" && !isNativeApp) {
-    navigator.serviceWorker.register("./sw.js?v=20260713-4").catch(() => {});
+    navigator.serviceWorker.register("./sw.js?v=20260713-5").catch(() => {});
   }
 }
+
+function showRuntimeError(message) {
+  const status = document.getElementById("runtimeStatus");
+  if (!status) return;
+  status.hidden = false;
+  status.textContent = `Erreur interface: ${message}. Recharge la page avec Ctrl + F5.`;
+}
+
+window.addEventListener("error", (event) => showRuntimeError(event.message || "erreur JavaScript"));
+window.addEventListener("unhandledrejection", (event) => showRuntimeError(event.reason?.message || "operation interrompue"));
 
 init();
