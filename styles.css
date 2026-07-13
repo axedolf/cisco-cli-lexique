@@ -446,6 +446,24 @@ a {
   gap: 16px;
 }
 
+.load-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 20px 0 4px;
+  color: var(--muted);
+}
+
+.load-more button {
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--strong);
+  background: var(--strong);
+  color: #17130a;
+  font-weight: 700;
+}
+
 @media (min-width: 1900px) {
   .cards-grid {
     grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -1105,6 +1123,12 @@ code {
 
   .cards-grid {
     grid-template-columns: 1fr;
+  }
+
+  .load-more {
+    align-items: stretch;
+    flex-direction: column;
+    text-align: center;
   }
 
   .stats {

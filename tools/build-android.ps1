@@ -42,14 +42,14 @@ if ($python) {
 
 $source = Join-Path $androidRoot "app\build\outputs\apk\release\app-release.apk"
 $downloads = Join-Path $root "downloads"
-$target = Join-Path $downloads "Cisco-CLI-Lexique-Android-v1.1.3.apk"
+$target = Join-Path $downloads "Cisco-CLI-Lexique-Android-v1.1.4.apk"
 New-Item -ItemType Directory -Force -Path $downloads | Out-Null
 Copy-Item -LiteralPath $source -Destination $target -Force
 
 $hash = (Get-FileHash -Algorithm SHA256 $target).Hash
 [System.IO.File]::WriteAllText(
-    (Join-Path $downloads "Cisco-CLI-Lexique-Android-v1.1.3.sha256.txt"),
-    "$hash  Cisco-CLI-Lexique-Android-v1.1.3.apk`r`n",
+    (Join-Path $downloads "Cisco-CLI-Lexique-Android-v1.1.4.sha256.txt"),
+    "$hash  Cisco-CLI-Lexique-Android-v1.1.4.apk`r`n",
     [System.Text.UTF8Encoding]::new($false)
 )
 

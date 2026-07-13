@@ -5,6 +5,7 @@ const state = {
   level: "all",
   view: "cards",
   activeResultIndex: -1,
+  visibleLimit: 24,
   favoritesOnly: false,
   equipmentProfile: localStorage.getItem("cisco-cli-equipment-profile") || "all",
   agentOpen: localStorage.getItem("cisco-cli-agent-open") === "true",
@@ -22,6 +23,7 @@ const snippetMap = Object.fromEntries((CISCO_DATA.snippets || []).map((snippet) 
 const copyStore = new Map();
 const boundActions = new WeakSet();
 let copyStoreCounter = 0;
+const VISIBLE_COMMAND_STEP = 24;
 
 function normalize(value) {
   return value.toString().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -304,6 +306,7 @@ function renderNav() {
   $$(".theme-link").forEach((button) => {
     button.addEventListener("click", () => {
       state.theme = button.dataset.theme;
+      state.visibleLimit = VISIBLE_COMMAND_STEP;
       render();
     });
   });
@@ -311,14 +314,14 @@ function renderNav() {
 
 function renderCards() {
   const items = filteredCommands();
+  const visibleItems = items.slice(0, state.visibleLimit);
   $("#resultCount").textContent = items.length;
-  if (state.activeResultIndex >= items.length) state.activeResultIndex = items.length - 1;
-  $("#cardsGrid").innerHTML = items.map((item) => {
+  if (state.activeResultIndex >= visibleItems.length) state.activeResultIndex = visibleItems.length - 1;
+  const cards = visibleItems.map((item, index) => {
     const theme = themeMap[item.theme];
     const id = commandId(item);
     const favorite = state.favorites.has(id);
     const exportText = commandsForExport(item.commands);
-    const index = items.indexOf(item);
     return `
       <article class="command-card ${state.activeResultIndex === index ? "selected" : ""}" style="--accent:${theme.accent}" data-result-index="${index}" tabindex="-1">
         <div class="card-head">
@@ -349,7 +352,23 @@ function renderCards() {
         </ul>
       </article>
     `;
-  }).join("") || `<div class="empty">Aucun resultat. Essaie un autre mot-cle ou retire un filtre.</div>`;
+  }).join("");
+
+  const remaining = items.length - visibleItems.length;
+  const pagination = remaining > 0 ? `
+    <div class="load-more" role="status">
+      <span>${visibleItems.length} fiches affichees sur ${items.length}</span>
+      <button id="loadMoreBtn" type="button">Afficher les ${Math.min(VISIBLE_COMMAND_STEP, remaining)} suivantes</button>
+    </div>
+  ` : "";
+
+  $("#cardsGrid").innerHTML = cards || `<div class="empty">Aucun resultat. Essaie un autre mot-cle ou retire un filtre.</div>`;
+  $("#cardsPagination").innerHTML = pagination;
+
+  document.getElementById("loadMoreBtn")?.addEventListener("click", () => {
+    state.visibleLimit += VISIBLE_COMMAND_STEP;
+    renderCards();
+  });
 
   bindCardActions();
 }
@@ -935,6 +954,7 @@ function init() {
   $("#searchInput").addEventListener("input", (event) => {
     state.query = event.target.value;
     state.activeResultIndex = state.query.trim() ? 0 : -1;
+    state.visibleLimit = VISIBLE_COMMAND_STEP;
     renderCards();
   });
 
@@ -942,11 +962,13 @@ function init() {
     button.addEventListener("click", () => {
       if (button.dataset.favorites) {
         state.favoritesOnly = !state.favoritesOnly;
+        state.visibleLimit = VISIBLE_COMMAND_STEP;
         button.classList.toggle("active", state.favoritesOnly);
         renderCards();
         return;
       }
       state.type = button.dataset.filter;
+      state.visibleLimit = VISIBLE_COMMAND_STEP;
       $$(".filter-chip[data-filter]").forEach((chip) => chip.classList.remove("active"));
       button.classList.add("active");
       renderCards();
@@ -955,6 +977,7 @@ function init() {
 
   $("#levelSelect").addEventListener("change", (event) => {
     state.level = event.target.value;
+    state.visibleLimit = VISIBLE_COMMAND_STEP;
     renderCards();
   });
 
@@ -976,6 +999,7 @@ function init() {
   $("#equipmentProfile").value = state.equipmentProfile;
   $("#equipmentProfile").addEventListener("change", (event) => {
     state.equipmentProfile = event.target.value;
+    state.visibleLimit = VISIBLE_COMMAND_STEP;
     localStorage.setItem("cisco-cli-equipment-profile", state.equipmentProfile);
     renderCards();
   });
@@ -1105,7 +1129,7 @@ function init() {
 function registerServiceWorker() {
   const isNativeApp = window.Capacitor?.isNativePlatform?.() === true;
   if ("serviceWorker" in navigator && location.protocol !== "file:" && !isNativeApp) {
-    navigator.serviceWorker.register("./sw.js?v=20260713-2").catch(() => {});
+    navigator.serviceWorker.register("./sw.js?v=20260713-3").catch(() => {});
   }
 }
 
