@@ -225,17 +225,6 @@ a {
   padding: 11px 12px;
   text-align: left;
   border-left: 4px solid var(--accent, var(--line));
-  color: var(--text);
-  text-decoration: none;
-}
-
-.runtime-status {
-  margin: 0;
-  padding: 10px 12px;
-  border: 1px solid var(--danger);
-  background: color-mix(in srgb, var(--danger) 16%, var(--panel));
-  color: var(--text);
-  line-height: 1.4;
 }
 
 .theme-link span {

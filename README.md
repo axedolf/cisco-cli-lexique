@@ -27,7 +27,7 @@ La version GitHub Pages est installable comme PWA depuis Chrome, Edge ou Safari 
 
 Pour generer un APK Android ou une application macOS Electron, voir `PACKAGING.md`.
 
-APK Android signe: [Cisco-CLI-Lexique-Android-v1.1.6.apk](downloads/Cisco-CLI-Lexique-Android-v1.1.6.apk)
+APK Android signe: [Cisco-CLI-Lexique-Android-v1.1.5.apk](downloads/Cisco-CLI-Lexique-Android-v1.1.5.apk)
 
 ## Agent IA integre
 
@@ -62,7 +62,6 @@ API securisee cote serveur afin de ne pas exposer de cle dans le navigateur.
 - Stabilite interface: nettoyage des donnees de copie temporaires, branchement unique des actions et navigation d'onglets renforcee.
 - Affichage progressif des fiches par groupes de 24 pour conserver des clics rapides sur les themes volumineux.
 - Filtres principaux par navigation interne fiable, sans reconstruction bloquante apres le clic.
-- Navigation des themes par URL autonome et affichage visible des erreurs d'interface.
 
 ## Architecture et contribution
 
