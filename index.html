@@ -6,9 +6,9 @@
   <meta name="theme-color" content="#101416">
   <meta name="description" content="Lexique Cisco CLI avec fiches, procedures, agent local, favoris et generateurs de configuration.">
   <title>Lexique Cisco CLI</title>
-  <link rel="manifest" href="./manifest.webmanifest?v=20260713-1">
+  <link rel="manifest" href="./manifest.webmanifest?v=20260713-2">
   <link rel="apple-touch-icon" href="./icons/icon-192.png">
-  <link rel="stylesheet" href="./styles.css?v=20260713-1">
+  <link rel="stylesheet" href="./styles.css?v=20260713-2">
 </head>
 <body>
   <header class="topbar">
@@ -59,12 +59,12 @@
 
       <section class="toolbar">
         <div class="view-tabs" role="tablist" aria-label="Vues">
-          <button class="view-tab active" data-view="cards">Fiches</button>
-          <button class="view-tab" data-view="tools">Outils IP</button>
-          <button class="view-tab" data-view="operations">Atelier terrain</button>
-          <button class="view-tab" data-view="emergency">Urgence</button>
-          <button class="view-tab" data-view="scenarios">Procedures</button>
-          <button class="view-tab" data-view="glossary">Glossaire</button>
+          <button class="view-tab active" data-view="cards" role="tab" aria-selected="true" aria-controls="cardsView">Fiches</button>
+          <button class="view-tab" data-view="tools" role="tab" aria-selected="false" aria-controls="toolsView" tabindex="-1">Outils IP</button>
+          <button class="view-tab" data-view="operations" role="tab" aria-selected="false" aria-controls="operationsView" tabindex="-1">Atelier terrain</button>
+          <button class="view-tab" data-view="emergency" role="tab" aria-selected="false" aria-controls="emergencyView" tabindex="-1">Urgence</button>
+          <button class="view-tab" data-view="scenarios" role="tab" aria-selected="false" aria-controls="scenariosView" tabindex="-1">Procedures</button>
+          <button class="view-tab" data-view="glossary" role="tab" aria-selected="false" aria-controls="glossaryView" tabindex="-1">Glossaire</button>
         </div>
         <div class="toolbar-selects">
           <select id="equipmentProfile" aria-label="Profil d'equipement">
@@ -104,11 +104,11 @@
         </details>
       </section>
 
-      <section id="cardsView" class="view-panel active">
+      <section id="cardsView" class="view-panel active" role="tabpanel">
         <div id="cardsGrid" class="cards-grid"></div>
       </section>
 
-      <section id="toolsView" class="view-panel">
+      <section id="toolsView" class="view-panel" role="tabpanel" hidden>
         <div class="tools-grid">
           <article class="tool-panel">
             <h3>Calculateur IP / Wildcard</h3>
@@ -121,7 +121,7 @@
         </div>
       </section>
 
-      <section id="operationsView" class="view-panel">
+      <section id="operationsView" class="view-panel" role="tabpanel" hidden>
         <div class="operations-grid">
           <article class="tool-panel operations-wide">
             <div class="panel-heading">
@@ -188,15 +188,15 @@
         </div>
       </section>
 
-      <section id="emergencyView" class="view-panel">
+      <section id="emergencyView" class="view-panel" role="tabpanel" hidden>
         <div id="emergencyList" class="scenario-list"></div>
       </section>
 
-      <section id="scenariosView" class="view-panel">
+      <section id="scenariosView" class="view-panel" role="tabpanel" hidden>
         <div id="scenarioList" class="scenario-list"></div>
       </section>
 
-      <section id="glossaryView" class="view-panel">
+      <section id="glossaryView" class="view-panel" role="tabpanel" hidden>
         <div id="glossaryList" class="glossary-list"></div>
       </section>
     </section>
@@ -235,7 +235,7 @@
     <p>Base inspiree et enrichie a partir du projet open source <a href="https://github.com/grplyler/cisco-cheatsheet#inter-vlan-routing" target="_blank" rel="noreferrer">grplyler/cisco-cheatsheet</a>. Les commandes doivent etre validees selon la version IOS/IOS XE, le modele et la politique de production.</p>
   </footer>
 
-  <script src="./data.js?v=20260713-1"></script>
-  <script src="./app.js?v=20260713-1"></script>
+  <script src="./data.js?v=20260713-2"></script>
+  <script src="./app.js?v=20260713-2"></script>
 </body>
 </html>

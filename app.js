@@ -20,6 +20,7 @@ const $$ = (selector) => Array.from(document.querySelectorAll(selector));
 const themeMap = Object.fromEntries(CISCO_DATA.themes.map((theme) => [theme.id, theme]));
 const snippetMap = Object.fromEntries((CISCO_DATA.snippets || []).map((snippet) => [snippet.commandTitle, snippet]));
 const copyStore = new Map();
+const boundActions = new WeakSet();
 let copyStoreCounter = 0;
 
 function normalize(value) {
@@ -508,6 +509,8 @@ function setAgentOpen(open) {
 
 function bindCardActions() {
   $$(".copy-btn").forEach((button) => {
+    if (boundActions.has(button)) return;
+    boundActions.add(button);
     button.addEventListener("click", async () => {
       await copyToClipboard(copyStore.get(button.dataset.copyId) || "");
       button.textContent = "Copie";
@@ -516,6 +519,8 @@ function bindCardActions() {
   });
 
   $$(".line-copy").forEach((button) => {
+    if (boundActions.has(button)) return;
+    boundActions.add(button);
     button.addEventListener("click", async () => {
       await copyToClipboard(copyStore.get(button.dataset.copyId) || "");
       button.textContent = "OK";
@@ -524,18 +529,24 @@ function bindCardActions() {
   });
 
   $$(".export-btn").forEach((button) => {
+    if (boundActions.has(button)) return;
+    boundActions.add(button);
     button.addEventListener("click", () => {
       downloadTextFile(button.dataset.filename, copyStore.get(button.dataset.exportId) || "");
     });
   });
 
   $$(".snippet").forEach((details) => {
+    if (boundActions.has(details)) return;
+    boundActions.add(details);
     details.querySelectorAll("[data-snippet-field]").forEach((input) => {
       input.addEventListener("input", () => updateSnippet(details));
     });
   });
 
   $$(".favorite").forEach((button) => {
+    if (boundActions.has(button)) return;
+    boundActions.add(button);
     button.addEventListener("click", () => {
       const id = button.dataset.favorite;
       if (state.favorites.has(id)) {
@@ -547,6 +558,19 @@ function bindCardActions() {
       renderCards();
     });
   });
+
+  pruneCopyStore();
+}
+
+function pruneCopyStore() {
+  const liveIds = new Set();
+  $$('[data-copy-id], [data-export-id]').forEach((element) => {
+    if (element.dataset.copyId) liveIds.add(element.dataset.copyId);
+    if (element.dataset.exportId) liveIds.add(element.dataset.exportId);
+  });
+  for (const id of copyStore.keys()) {
+    if (!liveIds.has(id)) copyStore.delete(id);
+  }
 }
 
 async function copyToClipboard(text) {
@@ -864,11 +888,21 @@ function highlightVariables(value) {
 }
 
 function setView(view) {
+  const activePanel = $(`#${view}View`);
+  if (!activePanel) return;
   state.view = view;
   state.activeResultIndex = -1;
-  $$(".view-tab").forEach((tab) => tab.classList.toggle("active", tab.dataset.view === view));
-  $$(".view-panel").forEach((panel) => panel.classList.remove("active"));
-  $(`#${view}View`).classList.add("active");
+  $$(".view-tab").forEach((tab) => {
+    const selected = tab.dataset.view === view;
+    tab.classList.toggle("active", selected);
+    tab.setAttribute("aria-selected", selected ? "true" : "false");
+    tab.tabIndex = selected ? 0 : -1;
+  });
+  $$(".view-panel").forEach((panel) => {
+    const selected = panel === activePanel;
+    panel.classList.toggle("active", selected);
+    panel.hidden = !selected;
+  });
 }
 
 function moveResultSelection(delta) {
@@ -926,6 +960,17 @@ function init() {
 
   $$(".view-tab").forEach((tab) => {
     tab.addEventListener("click", () => setView(tab.dataset.view));
+  });
+  $(".view-tabs").addEventListener("keydown", (event) => {
+    if (!["ArrowLeft", "ArrowRight"].includes(event.key)) return;
+    const tabs = $$(".view-tab");
+    const currentIndex = tabs.indexOf(document.activeElement);
+    if (currentIndex < 0) return;
+    event.preventDefault();
+    const delta = event.key === "ArrowRight" ? 1 : -1;
+    const nextTab = tabs[(currentIndex + delta + tabs.length) % tabs.length];
+    setView(nextTab.dataset.view);
+    nextTab.focus();
   });
 
   $("#equipmentProfile").value = state.equipmentProfile;
@@ -1060,7 +1105,7 @@ function init() {
 function registerServiceWorker() {
   const isNativeApp = window.Capacitor?.isNativePlatform?.() === true;
   if ("serviceWorker" in navigator && location.protocol !== "file:" && !isNativeApp) {
-    navigator.serviceWorker.register("./sw.js?v=20260713-1").catch(() => {});
+    navigator.serviceWorker.register("./sw.js?v=20260713-2").catch(() => {});
   }
 }
 
