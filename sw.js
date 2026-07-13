@@ -1,11 +1,11 @@
-const CACHE_NAME = "cisco-cli-lexique-v22";
+const CACHE_NAME = "cisco-cli-lexique-v23";
 const ASSETS = [
   "./",
   "./index.html",
-  "./styles.css?v=20260713-3",
-  "./data.js?v=20260713-3",
-  "./app.js?v=20260713-3",
-  "./manifest.webmanifest?v=20260713-3",
+  "./styles.css?v=20260713-4",
+  "./data.js?v=20260713-4",
+  "./app.js?v=20260713-4",
+  "./manifest.webmanifest?v=20260713-4",
   "./icon.svg",
   "./icons/icon-192.png",
   "./icons/icon-512.png"

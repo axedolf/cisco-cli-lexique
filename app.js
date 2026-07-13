@@ -945,34 +945,42 @@ function toggleSelectedCard() {
 function render() {
   renderNav();
   renderCards();
+  syncFilterControls();
   $("#commandCount").textContent = CISCO_DATA.commands.length;
   $("#themeCount").textContent = CISCO_DATA.themes.length;
 }
 
+function syncFilterControls() {
+  $$(".filter-chip[data-filter]").forEach((control) => {
+    const active = control.dataset.filter === state.type;
+    control.classList.toggle("active", active);
+    if (active) {
+      control.setAttribute("aria-current", "page");
+    } else {
+      control.removeAttribute("aria-current");
+    }
+  });
+  $("#favoritesFilter").classList.toggle("active", state.favoritesOnly);
+  if (state.favoritesOnly) {
+    $("#favoritesFilter").setAttribute("aria-current", "page");
+  } else {
+    $("#favoritesFilter").removeAttribute("aria-current");
+  }
+}
+
 function init() {
-  const requestedView = new URLSearchParams(location.search).get("view");
+  const searchParams = new URLSearchParams(location.search);
+  const requestedView = searchParams.get("view");
+  const requestedType = searchParams.get("type");
+  state.favoritesOnly = searchParams.get("favorites") === "1";
+  if (["all", "config", "verify", "troubleshoot", "security"].includes(requestedType)) {
+    state.type = requestedType;
+  }
   $("#searchInput").addEventListener("input", (event) => {
     state.query = event.target.value;
     state.activeResultIndex = state.query.trim() ? 0 : -1;
     state.visibleLimit = VISIBLE_COMMAND_STEP;
     renderCards();
-  });
-
-  $$(".filter-chip").forEach((button) => {
-    button.addEventListener("click", () => {
-      if (button.dataset.favorites) {
-        state.favoritesOnly = !state.favoritesOnly;
-        state.visibleLimit = VISIBLE_COMMAND_STEP;
-        button.classList.toggle("active", state.favoritesOnly);
-        renderCards();
-        return;
-      }
-      state.type = button.dataset.filter;
-      state.visibleLimit = VISIBLE_COMMAND_STEP;
-      $$(".filter-chip[data-filter]").forEach((chip) => chip.classList.remove("active"));
-      button.classList.add("active");
-      renderCards();
-    });
   });
 
   $("#levelSelect").addEventListener("change", (event) => {
@@ -1129,7 +1137,7 @@ function init() {
 function registerServiceWorker() {
   const isNativeApp = window.Capacitor?.isNativePlatform?.() === true;
   if ("serviceWorker" in navigator && location.protocol !== "file:" && !isNativeApp) {
-    navigator.serviceWorker.register("./sw.js?v=20260713-3").catch(() => {});
+    navigator.serviceWorker.register("./sw.js?v=20260713-4").catch(() => {});
   }
 }
 

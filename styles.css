@@ -196,8 +196,13 @@ a {
 }
 
 .filter-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 8px 10px;
   color: var(--muted);
+  cursor: pointer;
+  text-decoration: none;
 }
 
 .filter-chip.active,
