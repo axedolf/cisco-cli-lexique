@@ -310,13 +310,6 @@ function renderNav() {
   });
 
   nav.innerHTML = buttons.join("");
-  $$(".theme-link").forEach((button) => {
-    button.addEventListener("click", () => {
-      state.theme = button.dataset.theme;
-      state.visibleLimit = visibleCommandStep();
-      render();
-    });
-  });
 }
 
 function renderCards() {
@@ -984,6 +977,17 @@ function init() {
     state.type = requestedType;
   }
   state.visibleLimit = visibleCommandStep();
+
+  $("#themeNav").addEventListener("click", (event) => {
+    const button = event.target.closest("[data-theme]");
+    if (!button || !$("#themeNav").contains(button)) return;
+    state.theme = button.dataset.theme;
+    state.type = "all";
+    state.favoritesOnly = false;
+    state.visibleLimit = visibleCommandStep();
+    history.replaceState(null, "", "./index.html");
+    render();
+  });
   $("#searchInput").addEventListener("input", (event) => {
     state.query = event.target.value;
     state.activeResultIndex = state.query.trim() ? 0 : -1;
@@ -1145,7 +1149,7 @@ function init() {
 function registerServiceWorker() {
   const isNativeApp = window.Capacitor?.isNativePlatform?.() === true;
   if ("serviceWorker" in navigator && location.protocol !== "file:" && !isNativeApp) {
-    navigator.serviceWorker.register("./sw.js?v=20260713-6").catch(() => {});
+    navigator.serviceWorker.register("./sw.js?v=20260713-7").catch(() => {});
   }
 }
 

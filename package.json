@@ -1,6 +1,6 @@
 {
   "name": "cisco-cli-lexique",
-  "version": "1.1.6",
+  "version": "1.1.7",
   "description": "Lexique Cisco CLI installable en PWA et empaquetable en application desktop.",
   "private": true,
   "main": "electron/main.cjs",
