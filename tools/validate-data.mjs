@@ -60,7 +60,9 @@ const requiredSearches = [
   ["rapid-pvst", "Configurer Rapid-PVST root port-priority et cout"],
   ["auto qos voip cisco-phone", "Activer Auto-QoS pour telephone Cisco ou uplink"],
   ["switch 3 renumber 2", "Administrer les membres et ports d'une pile StackWise"],
-  ["show tech-support", "Collecter un rapport complet pour diagnostic TAC"]
+  ["show tech-support", "Collecter un rapport complet pour diagnostic TAC"],
+  ["term mon", "Afficher les journaux en temps reel dans une session SSH"],
+  ["logging event link-status", "Surveiller en direct connexion deconnexion et flap d'un port"]
 ];
 
 if (!Array.isArray(data.diagnostics) || data.diagnostics.length < 6) {

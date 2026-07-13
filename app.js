@@ -1060,7 +1060,7 @@ function init() {
 function registerServiceWorker() {
   const isNativeApp = window.Capacitor?.isNativePlatform?.() === true;
   if ("serviceWorker" in navigator && location.protocol !== "file:" && !isNativeApp) {
-    navigator.serviceWorker.register("./sw.js?v=20260712-1").catch(() => {});
+    navigator.serviceWorker.register("./sw.js?v=20260713-1").catch(() => {});
   }
 }
 

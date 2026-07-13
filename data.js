@@ -872,10 +872,21 @@ const CISCO_DATA = {
     },
     {
       theme: "monitoring", type: "verify", level: "base",
-      title: "Journaux locaux",
-      summary: "Affiche les evenements recents.",
-      commands: ["show logging", "terminal monitor", "terminal no monitor", "clear logging"],
-      notes: ["terminal monitor affiche les logs dans une session SSH/Telnet."]
+      title: "Afficher les journaux en temps reel dans une session SSH",
+      summary: "Active l'affichage en direct des syslogs et des sorties de debug sur le terminal distant courant.",
+      commands: ["show logging", "terminal monitor", "show terminal | include Monitor|Capabilities", "show logging | include LINK|LINEPROTO|UPDOWN|ERR_DISABLE", "terminal no monitor"],
+      platforms: ["IOS", "IOS XE", "Catalyst", "ISR", "ASR"],
+      aliases: ["term mon", "terminal monitor", "logs temps reel", "syslog ssh", "connexion deconnexion port", "terminal no monitor"],
+      notes: ["terminal monitor, souvent abrege term mon, agit uniquement sur la session SSH/Telnet courante et n'est pas conserve apres deconnexion.", "terminal no monitor coupe immediatement l'affichage sans desactiver la journalisation de l'equipement.", "Si aucun message n'apparait, verifier le niveau configure avec show logging et la commande globale logging monitor."]
+    },
+    {
+      theme: "monitoring", type: "troubleshoot", level: "intermediaire",
+      title: "Surveiller en direct connexion deconnexion et flap d'un port",
+      summary: "Suit les changements up/down d'une interface et rapproche les syslogs des erreurs physiques et causes d'err-disable.",
+      commands: ["configure terminal", "service timestamps log datetime msec localtime show-timezone", "logging buffered informational", "logging monitor informational", "interface <interface-name>", "logging event link-status", "end", "terminal monitor", "show logging | include <interface-name>|LINK|LINEPROTO|UPDOWN|ERR_DISABLE", "show interfaces <interface-name> status", "show interfaces <interface-name> counters errors", "show interfaces <interface-name> | include line protocol|Last input|input errors|CRC|drops|reset", "terminal no monitor"],
+      platforms: ["IOS", "IOS XE", "Catalyst"],
+      aliases: ["port flap", "link flap", "port up down", "connexion deconnexion", "logging event link-status", "surveillance port temps reel", "term mon interface"],
+      notes: ["service timestamps ajoute date, millisecondes et fuseau pour correler precisement les coupures.", "logging event link-status depend du modele et de la version; les changements de lien sont deja journalises par defaut sur de nombreuses plateformes.", "Un flap repete avec CRC/input errors oriente vers cable, prise, SFP, alimentation PoE ou negociation speed/duplex.", "Eviter clear logging et clear counters avant d'avoir sauvegarde les preuves utiles a l'incident."]
     },
     {
       theme: "hardware", type: "verify", level: "base",

@@ -27,7 +27,7 @@ La version GitHub Pages est installable comme PWA depuis Chrome, Edge ou Safari 
 
 Pour generer un APK Android ou une application macOS Electron, voir `PACKAGING.md`.
 
-APK Android signe: [Cisco-CLI-Lexique-Android-v1.1.1.apk](downloads/Cisco-CLI-Lexique-Android-v1.1.1.apk)
+APK Android signe: [Cisco-CLI-Lexique-Android-v1.1.2.apk](downloads/Cisco-CLI-Lexique-Android-v1.1.2.apk)
 
 ## Agent IA integre
 
@@ -58,6 +58,7 @@ API securisee cote serveur afin de ne pas exposer de cle dans le navigateur.
 - Supervision: Flexible NetFlow, IP SLA, tracking et ERSPAN.
 - Datacenter: vPC, VXLAN EVPN, FEX, transceivers et ressources ASIC Nexus.
 - Maintenance logicielle: controle d'image, boot, installation IOS XE et mise a jour NX-OS.
+- Surveillance temps reel: `terminal monitor`, evenements link-status, horodatage precis et diagnostic des ports instables.
 
 ## Architecture et contribution
 
@@ -74,6 +75,8 @@ Complements compares puis reformules a partir de:
 
 - https://routeur.clemanet.com/index.php
 - https://www.clemanet.com/switch-cisco.php
+- https://www.cisco.com/c/en/us/td/docs/ios/fundamentals/command/reference/cf_book/cf_l1.html
+- https://www.cisco.com/c/en/us/td/docs/ios-xml/ios/fundamentals/command/Cisco_IOS_Configuration_Fundamentals_Command_Reference/show_gsr_through_show_monitor_event_trace.html
 
 Les commandes Cisco IOS / IOS XE varient selon les versions, licences et modeles.
 Tester toute commande critique en laboratoire ou fenetre de maintenance avant production.
