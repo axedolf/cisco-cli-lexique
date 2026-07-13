@@ -23,7 +23,14 @@ const snippetMap = Object.fromEntries((CISCO_DATA.snippets || []).map((snippet) 
 const copyStore = new Map();
 const boundActions = new WeakSet();
 let copyStoreCounter = 0;
-const VISIBLE_COMMAND_STEP = 24;
+const DEFAULT_VISIBLE_COMMAND_STEP = 24;
+const FILTERED_VISIBLE_COMMAND_STEP = 8;
+
+function visibleCommandStep() {
+  return state.type === "all" && !state.favoritesOnly && !state.query.trim()
+    ? DEFAULT_VISIBLE_COMMAND_STEP
+    : FILTERED_VISIBLE_COMMAND_STEP;
+}
 
 function normalize(value) {
   return value.toString().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
@@ -306,7 +313,7 @@ function renderNav() {
   $$(".theme-link").forEach((button) => {
     button.addEventListener("click", () => {
       state.theme = button.dataset.theme;
-      state.visibleLimit = VISIBLE_COMMAND_STEP;
+      state.visibleLimit = visibleCommandStep();
       render();
     });
   });
@@ -358,7 +365,7 @@ function renderCards() {
   const pagination = remaining > 0 ? `
     <div class="load-more" role="status">
       <span>${visibleItems.length} fiches affichees sur ${items.length}</span>
-      <button id="loadMoreBtn" type="button">Afficher les ${Math.min(VISIBLE_COMMAND_STEP, remaining)} suivantes</button>
+      <button id="loadMoreBtn" type="button">Afficher les ${Math.min(visibleCommandStep(), remaining)} suivantes</button>
     </div>
   ` : "";
 
@@ -366,7 +373,7 @@ function renderCards() {
   $("#cardsPagination").innerHTML = pagination;
 
   document.getElementById("loadMoreBtn")?.addEventListener("click", () => {
-    state.visibleLimit += VISIBLE_COMMAND_STEP;
+    state.visibleLimit += visibleCommandStep();
     renderCards();
   });
 
@@ -976,16 +983,17 @@ function init() {
   if (["all", "config", "verify", "troubleshoot", "security"].includes(requestedType)) {
     state.type = requestedType;
   }
+  state.visibleLimit = visibleCommandStep();
   $("#searchInput").addEventListener("input", (event) => {
     state.query = event.target.value;
     state.activeResultIndex = state.query.trim() ? 0 : -1;
-    state.visibleLimit = VISIBLE_COMMAND_STEP;
+    state.visibleLimit = visibleCommandStep();
     renderCards();
   });
 
   $("#levelSelect").addEventListener("change", (event) => {
     state.level = event.target.value;
-    state.visibleLimit = VISIBLE_COMMAND_STEP;
+    state.visibleLimit = visibleCommandStep();
     renderCards();
   });
 
@@ -1007,7 +1015,7 @@ function init() {
   $("#equipmentProfile").value = state.equipmentProfile;
   $("#equipmentProfile").addEventListener("change", (event) => {
     state.equipmentProfile = event.target.value;
-    state.visibleLimit = VISIBLE_COMMAND_STEP;
+    state.visibleLimit = visibleCommandStep();
     localStorage.setItem("cisco-cli-equipment-profile", state.equipmentProfile);
     renderCards();
   });
@@ -1137,7 +1145,7 @@ function init() {
 function registerServiceWorker() {
   const isNativeApp = window.Capacitor?.isNativePlatform?.() === true;
   if ("serviceWorker" in navigator && location.protocol !== "file:" && !isNativeApp) {
-    navigator.serviceWorker.register("./sw.js?v=20260713-4").catch(() => {});
+    navigator.serviceWorker.register("./sw.js?v=20260713-6").catch(() => {});
   }
 }
 
